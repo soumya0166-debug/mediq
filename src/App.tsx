@@ -30,11 +30,14 @@ import { DoctorReferralPage } from './components/doctor/DoctorReferralPage';
 import { DoctorReportsPage } from './components/doctor/DoctorReportsPage';
 import { DoctorAuditLogPage } from './components/doctor/DoctorAuditLogPage';
 
-// Lucide icons for mobile bottom navigation (Section 12 & 42)
+// Mobile navigation localized labels
 import { LayoutDashboard, ClipboardList, FileText, History, User } from 'lucide-react';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { LanguageWelcomeModal } from './components/common/LanguageWelcomeModal';
 
 const AppContent: React.FC = () => {
   const { currentRoute, currentRole, navigate, setSelectedAssessmentId } = useApp();
+  const { t } = useLanguage();
 
   // Auto-sync selectedAssessmentId when navigating to a patient review route
   useEffect(() => {
@@ -103,7 +106,7 @@ const AppContent: React.FC = () => {
         {renderRoute()}
       </div>
 
-      {/* Mobile Bottom Navigation for Patient (Section 12 & 42 Spec) */}
+      {/* Mobile Bottom Navigation for Patient */}
       {isPatientRoute && (
         <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 px-2 py-1.5 shadow-lg flex items-center justify-around text-[10px] font-semibold text-slate-600">
           <button
@@ -113,7 +116,7 @@ const AppContent: React.FC = () => {
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
-            <span>Dashboard</span>
+            <span>{t('nav.dashboard')}</span>
           </button>
 
           <button
@@ -123,7 +126,7 @@ const AppContent: React.FC = () => {
             }`}
           >
             <ClipboardList className="w-4 h-4" />
-            <span>Assessments</span>
+            <span>{t('nav.assessments')}</span>
           </button>
 
           <button
@@ -133,7 +136,7 @@ const AppContent: React.FC = () => {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Reports</span>
+            <span>{t('nav.reports')}</span>
           </button>
 
           <button
@@ -143,7 +146,7 @@ const AppContent: React.FC = () => {
             }`}
           >
             <History className="w-4 h-4" />
-            <span>Timeline</span>
+            <span>{t('nav.timeline')}</span>
           </button>
 
           <button
@@ -153,17 +156,18 @@ const AppContent: React.FC = () => {
             }`}
           >
             <User className="w-4 h-4" />
-            <span>Profile</span>
+            <span>{t('nav.profile')}</span>
           </button>
         </nav>
       )}
 
-      {/* Universal Footer with Mandatory Section 50 Disclaimers */}
+      {/* Universal Footer with Mandatory Disclaimers */}
       <Footer />
 
       {/* Global Modals */}
       <PrivacyModal />
       <DemoGuideModal />
+      <LanguageWelcomeModal />
     </div>
   );
 };
@@ -171,7 +175,9 @@ const AppContent: React.FC = () => {
 export function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </AppProvider>
   );
 }

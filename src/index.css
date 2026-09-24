@@ -2,76 +2,70 @@
 
 @layer base {
   :root {
-    --brand-primary: #0A1E3F;
-    --brand-primary-light: #163B66;
-    --brand-teal: #0D9488;
-    --brand-teal-dark: #0F766E;
-    --bg-page: #F8FAFC;
-    --surface-card: #FFFFFF;
-    --surface-muted: #F1F5F9;
-    --border-subtle: #E2E8F0;
-    --border-strong: #CBD5E1;
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #64748B;
+    --primary: #032956;
+    --primary-light: #133e6f;
+    --accent: #0284c7;
+    --accent-teal: #0d9488;
+    --surface-bg: #f8fafc;
+    --surface-card: #ffffff;
+    --border-color: #e2e8f0;
   }
 
   body {
-    background-color: #F8FAFC;
-    color: #0F172A;
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Subtle, stable shadows matching enterprise digital health systems */
-.shadow-careq-xs {
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.shadow-careq-sm {
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
 }
 
-.shadow-careq-md {
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
 }
 
-/* Restrained rounded borders */
-.rounded-careq-sm {
-  border-radius: 8px;
-}
-.rounded-careq-md {
-  border-radius: 10px;
-}
-.rounded-careq-lg {
-  border-radius: 12px;
-}
-.rounded-careq-xl {
-  border-radius: 14px;
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-/* Voice Waveform animation */
-@keyframes careqVoiceBar {
-  0%, 100% { height: 6px; }
-  50% { height: 26px; }
+/* Subtle pulse and waveform animations */
+@keyframes voiceWave {
+
+  0%,
+  100% {
+    height: 8px;
+  }
+
+  50% {
+    height: 28px;
+  }
 }
 
-.animate-voice-pulse {
-  animation: careqVoiceBar 1.1s ease-in-out infinite;
+.animate-voice-wave {
+  animation: voiceWave 1s ease-in-out infinite;
 }
 
-/* Print layout for clinical referral notes */
+/* Print styles for Referral Note PDF */
 @media print {
   body {
     background: #ffffff !important;
-    color: #000000 !important;
   }
+
   .no-print {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Assessment, ExtractedReportItem } from '../../types';
 import { SAMPLE_REPORTS_LIBRARY } from '../../data/mockData';
 import { 
@@ -23,18 +24,35 @@ import {
 
 export const NewAssessmentPage: React.FC = () => {
   const { currentPatient, addAssessment, navigate, addAuditEvent } = useApp();
+  const { t, locale } = useLanguage();
 
   // Workflow Step: 01 Describe -> 02 Add Reports -> 03 Review -> 04 Share (Section 19)
   const [assessmentStep, setAssessmentStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Input states
-  const [selectedLanguage, setSelectedLanguage] = useState(currentPatient?.preferredLanguage || 'Odia');
+  const initialLang = locale === 'or-IN' ? 'Odia' : locale === 'hi-IN' ? 'Hindi' : 'English';
+  const [selectedLanguage, setSelectedLanguage] = useState<'Odia' | 'Hindi' | 'English'>(initialLang);
   const [symptomText, setSymptomText] = useState(
-    'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
+    initialLang === 'Odia' 
+      ? 'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
+      : initialLang === 'Hindi'
+      ? 'पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।'
+      : 'I have had severe fever and cough for 2 days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
   );
   const [englishTranslation, setEnglishTranslation] = useState(
     'I have had severe fever and cough for 2 days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
   );
+
+  // Sync when global locale changes
+  useEffect(() => {
+    if (locale === 'or-IN') {
+      handleApplyPreset('Odia');
+    } else if (locale === 'hi-IN') {
+      handleApplyPreset('Hindi');
+    } else {
+      handleApplyPreset('English');
+    }
+  }, [locale]);
 
   // Voice recording state (Section 21)
   const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'captured'>('captured');
@@ -352,9 +370,46 @@ export const NewAssessmentPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Voice UI with Large Circular Microphone (Section 21) */}
+          {/* Voice UI with Large Circular Microphone (Section 18 & 21) */}
           <div className="p-6 rounded-careq-md bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center space-y-4">
             
+            {/* Section 18: Voice Language Selection */}
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs bg-white px-3 py-1.5 rounded-full border border-slate-200">
+              <span className="font-semibold text-slate-700 flex items-center gap-1">
+                <Mic className="w-3.5 h-3.5 text-teal-700" />
+                <span>Speak in:</span>
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('English')}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedLanguage === 'English' ? 'bg-[#0A1E3F] text-white font-bold' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('Hindi')}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedLanguage === 'Hindi' ? 'bg-[#0A1E3F] text-white font-bold' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  हिन्दी
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('Odia')}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedLanguage === 'Odia' ? 'bg-[#0A1E3F] text-white font-bold' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  ଓଡ଼ିଆ
+                </button>
+              </div>
+            </div>
+
             {/* Circular Mic Button */}
             <button
               type="button"
@@ -375,11 +430,18 @@ export const NewAssessmentPage: React.FC = () => {
             <div className="space-y-0.5">
               <div className="font-bold text-sm text-slate-900">
                 {voiceState === 'recording' && `Listening... (${recordingSeconds}s)`}
-                {voiceState === 'captured' && 'Voice captured ✓'}
-                {voiceState === 'idle' && 'Tap to speak'}
+                {voiceState === 'captured' && (
+                  <span className="text-teal-800 flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                    <span>Your voice has been converted to text</span>
+                  </span>
+                )}
+                {voiceState === 'idle' && t('assessment.recordVoice')}
               </div>
               <p className="text-[11px] text-slate-500">
-                {voiceState === 'captured' ? 'Audio stream transcribed in Odia' : 'Speak naturally in Odia, Hindi, or English'}
+                {voiceState === 'captured' 
+                  ? `Transcribed accurately in ${selectedLanguage === 'Odia' ? 'ଓଡ଼ିଆ' : selectedLanguage === 'Hindi' ? 'हिन्दी' : 'English'}` 
+                  : 'Speak naturally in Odia, Hindi, or English'}
               </p>
             </div>
 
@@ -395,17 +457,43 @@ export const NewAssessmentPage: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* Voice Actions: Edit, Record Again */}
+            {voiceState === 'captured' && (
+              <div className="flex items-center gap-2 pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={handleToggleVoice}
+                  className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 font-semibold flex items-center gap-1"
+                >
+                  <Mic className="w-3 h-3 text-teal-700" />
+                  <span>Record again</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('symptom-textarea');
+                    el?.focus();
+                  }}
+                  className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 font-semibold flex items-center gap-1"
+                >
+                  <Edit2 className="w-3 h-3 text-slate-500" />
+                  <span>Edit text</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Text Input Area */}
           <div className="space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
               <label className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">
-                Symptom Text Description
+                {t('assessment.symptoms')}
               </label>
-              <span className="text-slate-400">Language: {selectedLanguage}</span>
+              <span className="text-slate-400 font-medium">Language: {selectedLanguage === 'Odia' ? 'ଓଡ଼ିଆ' : selectedLanguage === 'Hindi' ? 'हिन्दी' : 'English'}</span>
             </div>
             <textarea
+              id="symptom-textarea"
               rows={3}
               value={symptomText}
               onChange={(e) => setSymptomText(e.target.value)}
@@ -414,20 +502,22 @@ export const NewAssessmentPage: React.FC = () => {
             />
           </div>
 
-          {/* Section 21: Clear distinction between Original and Translated for review */}
+          {/* Section 16 & 21: Clear distinction between Original and Translated for review */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3.5 rounded-careq-sm bg-slate-50 border border-slate-200 space-y-1">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Original Input ({selectedLanguage})
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                <span>{t('common.original')} ({selectedLanguage === 'Odia' ? 'ଓଡ଼ିଆ' : selectedLanguage === 'Hindi' ? 'हिन्दी' : 'English'})</span>
+                <span className="text-teal-700 font-semibold font-mono text-[9px]">Unmodified source</span>
               </div>
-              <p className="text-slate-800 font-medium leading-relaxed">
+              <p className="text-slate-900 font-medium leading-relaxed">
                 "{symptomText}"
               </p>
             </div>
 
             <div className="p-3.5 rounded-careq-sm bg-teal-50/50 border border-teal-200 space-y-1">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-teal-800">
-                Translated for Review (English)
+              <div className="text-[10px] font-bold uppercase tracking-wider text-teal-800 flex items-center justify-between">
+                <span>{t('common.translated')} (English)</span>
+                <span className="text-teal-800 font-mono text-[9px]">AI Advisory</span>
               </div>
               <p className="text-teal-950 font-medium leading-relaxed italic">
                 "{englishTranslation}"
@@ -441,14 +531,14 @@ export const NewAssessmentPage: React.FC = () => {
               onClick={() => navigate('/patient/dashboard')}
               className="text-slate-500 hover:text-slate-800 font-semibold"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
               onClick={() => setAssessmentStep(2)}
               className="px-5 py-2.5 bg-[#0A1E3F] hover:bg-[#163B66] text-white font-bold rounded-careq-sm transition-colors flex items-center gap-1.5"
             >
-              <span>Continue to Step 02: Add Reports</span>
+              <span>{t('assessment.continue')}: {t('assessment.uploadReport')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -462,7 +552,7 @@ export const NewAssessmentPage: React.FC = () => {
           
           <div className="border-b border-slate-200 pb-3">
             <h2 className="text-base font-bold text-slate-900">
-              Step 02: Add Medical Report
+              Step 02: {t('assessment.uploadReport')}
             </h2>
             <p className="text-xs text-slate-500">
               Upload laboratory blood tests or X-rays for automated OCR parameter extraction.
@@ -516,15 +606,15 @@ export const NewAssessmentPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {uploadedReports[0].tests.map((t, idx) => (
-                    <tr key={idx} className={t.isAbnormal ? 'bg-amber-50/40' : ''}>
-                      <td className="py-2 px-3 font-semibold text-slate-800">{t.testName}</td>
+                  {uploadedReports[0].tests.map((tItem, idx) => (
+                    <tr key={idx} className={tItem.isAbnormal ? 'bg-amber-50/40' : ''}>
+                      <td className="py-2 px-3 font-semibold text-slate-800">{tItem.testName}</td>
                       <td className="py-2 px-3 font-mono font-bold text-slate-900">
-                        {t.result} <span className="text-slate-400 text-[10px] font-normal">{t.unit}</span>
+                        {tItem.result} <span className="text-slate-400 text-[10px] font-normal">{tItem.unit}</span>
                       </td>
-                      <td className="py-2 px-3 text-slate-500 font-mono text-[11px]">{t.referenceRange}</td>
+                      <td className="py-2 px-3 text-slate-500 font-mono text-[11px]">{tItem.referenceRange}</td>
                       <td className="py-2 px-3">
-                        {t.isAbnormal ? (
+                        {tItem.isAbnormal ? (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                             Attention Flag
                           </span>
@@ -546,14 +636,14 @@ export const NewAssessmentPage: React.FC = () => {
               onClick={() => setAssessmentStep(1)}
               className="text-slate-500 hover:text-slate-800 font-semibold"
             >
-              ← Back to Describe
+              ← {t('assessment.previous')}
             </button>
             <button
               type="button"
               onClick={() => setAssessmentStep(3)}
               className="px-5 py-2.5 bg-[#0A1E3F] hover:bg-[#163B66] text-white font-bold rounded-careq-sm transition-colors flex items-center gap-1.5"
             >
-              <span>Continue to Step 03: Review Information</span>
+              <span>{t('assessment.continue')}: {t('assessment.reviewSubmission')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -567,7 +657,7 @@ export const NewAssessmentPage: React.FC = () => {
           
           <div className="border-b border-slate-200 pb-3">
             <h2 className="text-xl font-extrabold text-[#0A1E3F]">
-              Review your information
+              {t('assessment.reviewSubmission')}
             </h2>
             <p className="text-xs text-slate-500">
               Verify all extracted details before sending to the on-duty healthcare worker.
@@ -581,7 +671,7 @@ export const NewAssessmentPage: React.FC = () => {
             <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  1. Reported Symptoms
+                  1. {t('assessment.symptoms')}
                 </span>
                 <button
                   onClick={() => setAssessmentStep(1)}
@@ -594,7 +684,7 @@ export const NewAssessmentPage: React.FC = () => {
                 "{symptomText}"
               </p>
               <div className="text-[11px] text-slate-500">
-                Duration: <strong>2 days</strong>
+                {t('assessment.duration')}: <strong>2 days</strong>
               </div>
             </div>
 
@@ -602,7 +692,7 @@ export const NewAssessmentPage: React.FC = () => {
             <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  2. Reported Timeline
+                  2. {t('patient.healthTimeline')}
                 </span>
                 <span className="text-slate-400 text-[10px]">Auto-structured</span>
               </div>
@@ -616,7 +706,7 @@ export const NewAssessmentPage: React.FC = () => {
             <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  3. Diagnostic Reports Attached
+                  3. {t('patient.myReports')}
                 </span>
                 <button
                   onClick={() => setAssessmentStep(2)}
@@ -634,7 +724,7 @@ export const NewAssessmentPage: React.FC = () => {
             <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  4. Voice Transcript
+                  4. {t('assessment.recordVoice')} Transcript
                 </span>
                 <span className="text-teal-800 font-mono text-[10px]">✓ Audio Attached</span>
               </div>
@@ -662,7 +752,7 @@ export const NewAssessmentPage: React.FC = () => {
               onClick={() => setAssessmentStep(2)}
               className="text-slate-500 hover:text-slate-800 font-semibold"
             >
-              ← Back to Reports
+              ← {t('assessment.previous')}
             </button>
             <button
               type="button"
@@ -670,7 +760,7 @@ export const NewAssessmentPage: React.FC = () => {
               disabled={isSubmitting}
               className="px-6 py-3 bg-[#0A1E3F] hover:bg-[#163B66] disabled:opacity-50 text-white font-bold rounded-careq-sm transition-colors shadow-careq-xs flex items-center gap-2"
             >
-              {isSubmitting ? 'Securing & Dispatching...' : 'Submit for healthcare review'}
+              {isSubmitting ? 'Securing & Dispatching...' : t('assessment.submit')}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -687,7 +777,7 @@ export const NewAssessmentPage: React.FC = () => {
               <Check className="w-6 h-6 text-emerald-700" />
             </div>
             <h2 className="text-xl font-extrabold text-slate-900">
-              Your information has been securely submitted
+              {t('assessment.assessmentSubmitted')}
             </h2>
             <p className="text-slate-500 max-w-md mx-auto">
               Case Reference: <strong className="font-mono text-slate-800">{submittedCaseId}</strong>
@@ -727,7 +817,7 @@ export const NewAssessmentPage: React.FC = () => {
               onClick={() => navigate('/patient/history')}
               className="px-6 py-2.5 bg-[#0A1E3F] hover:bg-[#163B66] text-white font-bold rounded-careq-sm transition-colors shadow-careq-xs"
             >
-              Track Live Status in Assessments →
+              {t('patient.myAssessments')} →
             </button>
           </div>
 

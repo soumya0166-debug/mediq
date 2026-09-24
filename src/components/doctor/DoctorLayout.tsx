@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { LanguageSelector } from '../common/LanguageSelector';
 import { Facility } from '../../types';
 import { 
   Activity, 
@@ -12,17 +14,17 @@ import {
   ShieldCheck, 
   Stethoscope, 
   Layers, 
-  Sparkles,
-  ChevronRight,
-  LogOut,
-  Building2,
-  FileCheck,
-  CheckCircle2,
-  CheckSquare,
-  HelpCircle,
-  Shield,
-  ArrowRightLeft,
-  ChevronDown
+  Sparkles, 
+  ChevronRight, 
+  LogOut, 
+  Building2, 
+  FileCheck, 
+  CheckCircle2, 
+  CheckSquare, 
+  HelpCircle, 
+  Shield, 
+  ArrowRightLeft, 
+  ChevronDown 
 } from 'lucide-react';
 
 export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -38,6 +40,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
     switchFacility, 
     availableFacilities 
   } = useApp();
+  const { t } = useLanguage();
 
   const [facilityDropdownOpen, setFacilityDropdownOpen] = useState(false);
 
@@ -58,22 +61,29 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
         {/* Top: Facility Branding */}
         <div>
           {/* Section 11 Brand Header */}
-          <div className="p-5 border-b border-slate-800/80">
-            <div 
-              className="flex items-center gap-3 cursor-pointer group" 
-              onClick={() => navigate('/doctor/dashboard')}
-            >
-              <div className="w-9 h-9 rounded-lg bg-teal-600/30 border border-teal-500/40 flex items-center justify-center text-teal-300 shadow-xs">
-                <Stethoscope className="w-5 h-5 text-teal-300" />
+          <div className="p-4 border-b border-slate-800/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div 
+                className="flex items-center gap-2.5 cursor-pointer group" 
+                onClick={() => navigate('/clinical/dashboard')}
+              >
+                <div className="w-8 h-8 rounded-lg bg-teal-600/30 border border-teal-500/40 flex items-center justify-center text-teal-300 shadow-xs">
+                  <Stethoscope className="w-4 h-4 text-teal-300" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-white text-sm tracking-tight block leading-tight">
+                    CAREQ
+                  </span>
+                  <span className="text-[10px] font-medium text-teal-400 tracking-normal block">
+                    Digital Health Triage
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="font-extrabold text-white text-base tracking-tight block leading-tight">
-                  CAREQ
-                </span>
-                <span className="text-[11px] font-medium text-teal-400 tracking-normal block">
-                  Digital Health Triage
-                </span>
-              </div>
+            </div>
+
+            {/* Quick Accessible Language Selector in Clinical Workspace (Section 3 Spec) */}
+            <div className="pt-1">
+              <LanguageSelector variant="compact" />
             </div>
           </div>
 
@@ -83,7 +93,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
             {/* GROUP 1: WORKSPACE */}
             <div className="space-y-1">
               <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Workspace
+                {t('clinical.workspaceTitle', 'Workspace')}
               </div>
 
               {/* Dashboard */}
@@ -97,7 +107,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <Activity className="w-4 h-4 text-teal-400" />
-                  <span>Dashboard</span>
+                  <span>{t('nav.dashboard')}</span>
                 </div>
               </button>
 
@@ -112,7 +122,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <Clock className="w-4 h-4 text-slate-400" />
-                  <span>Patient Queue</span>
+                  <span>{t('nav.queue')}</span>
                 </div>
                 {waitingCount > 0 && (
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">
@@ -132,7 +142,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <AlertCircle className="w-4 h-4 text-red-400" />
-                  <span>Priority Cases</span>
+                  <span>{t('nav.priorityCases')}</span>
                 </div>
                 {highPriorityCount > 0 && (
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-red-900/80 border border-red-500/50 text-red-200">
@@ -152,7 +162,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <CheckSquare className="w-4 h-4 text-teal-400" />
-                  <span>My Reviews</span>
+                  <span>{t('nav.myReviews')}</span>
                 </div>
                 <span className="text-[10px] font-mono text-slate-400">{reviewedCount}</span>
               </button>
@@ -168,7 +178,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <HelpCircle className="w-4 h-4 text-amber-400" />
-                  <span>Follow-ups</span>
+                  <span>{t('nav.followUps')}</span>
                 </div>
                 {followUpCount > 0 && (
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-900/60 text-amber-200">
@@ -188,7 +198,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <Share2 className="w-4 h-4 text-teal-400" />
-                  <span>Referrals</span>
+                  <span>{t('nav.referrals')}</span>
                 </div>
                 <span className="text-[10px] font-mono text-slate-400">{referralCount}</span>
               </button>
@@ -197,7 +207,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
             {/* GROUP 2: HEALTH INFORMATION */}
             <div className="space-y-1">
               <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Health Information
+                {t('clinical.sourceInformation', 'Health Information')}
               </div>
 
               {/* Health Timeline */}
@@ -207,7 +217,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <History className="w-4 h-4 text-slate-400" />
-                  <span>Health Timeline</span>
+                  <span>{t('nav.timeline')}</span>
                 </div>
               </button>
 
@@ -222,7 +232,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <FileCheck className="w-4 h-4 text-teal-400" />
-                  <span>Reports</span>
+                  <span>{t('nav.reports')}</span>
                 </div>
               </button>
 
@@ -233,7 +243,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-teal-400" />
-                  <span>Consent</span>
+                  <span>{t('nav.consent')}</span>
                 </div>
               </button>
             </div>
@@ -255,7 +265,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <History className="w-4 h-4 text-teal-400" />
-                  <span>Audit Log</span>
+                  <span>{t('nav.auditLog')}</span>
                 </div>
               </button>
 
@@ -267,7 +277,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
                 >
                   <div className="flex items-center gap-2.5 truncate">
                     <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    <span className="truncate">Facility</span>
+                    <span className="truncate">{t('nav.facility')}</span>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                 </button>
@@ -275,7 +285,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
                 {facilityDropdownOpen && (
                   <div className="p-2 mt-1 bg-slate-950 border border-slate-800 rounded-lg space-y-1 text-xs shadow-xl animate-in fade-in">
                     <div className="px-2 py-1 text-[10px] text-slate-400 font-bold uppercase">
-                      Switch Facility (Section 40)
+                      {t('nav.switchFacility')}
                     </div>
                     {availableFacilities.map((f: Facility) => (
                       <button
@@ -308,7 +318,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
               >
                 <div className="flex items-center gap-2.5">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Evaluation Guide</span>
+                  <span>{t('nav.evaluationGuide')}</span>
                 </div>
               </button>
             </div>
@@ -323,7 +333,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
           
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Verified Professional
+              {t('auth.trustVerified')}
             </span>
             <div className="font-bold text-sm text-white truncate">
               {currentDoctor?.name || 'Dr. Ananya Sharma'}
@@ -345,7 +355,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
             className="w-full mt-2 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-2"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
+            <span>{t('nav.signOut')}</span>
           </button>
 
         </div>

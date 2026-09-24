@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { LanguageSelector } from '../common/LanguageSelector';
 import { MOCK_PATIENTS, MOCK_DOCTORS } from '../../data/mockData';
 import { 
   ShieldCheck, 
@@ -22,6 +24,7 @@ import {
 
 export const LoginPage: React.FC = () => {
   const { navigate, loginAsPatient, loginAsDoctor } = useApp();
+  const { t } = useLanguage();
 
   // Mode: initial role choice vs specific sign-in form (Sections 5, 6, 14)
   const [viewState, setViewState] = useState<'CHOICE' | 'PATIENT_SIGNIN' | 'DOCTOR_SIGNIN'>('CHOICE');
@@ -69,15 +72,15 @@ export const LoginPage: React.FC = () => {
 
               <div className="space-y-1 pt-2">
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0A1E3F] tracking-tight leading-snug">
-                  Connected health information.
+                  {t('common.tagline')}
                 </h2>
                 <h2 className="text-xl sm:text-2xl font-bold text-teal-700 tracking-tight leading-snug">
-                  Faster clinical review.
+                  {t('common.taglineSubtitle')}
                 </h2>
               </div>
 
               <p className="text-slate-600 text-sm leading-relaxed max-w-lg pt-1">
-                CAREQ helps organize patient-provided health information for review by authorized healthcare professionals.
+                {t('auth.brandSummary')}
               </p>
             </div>
 
@@ -86,7 +89,7 @@ export const LoginPage: React.FC = () => {
               <div className="bg-white border border-slate-200 rounded-lg p-3.5 space-y-1 shadow-2xs">
                 <div className="text-emerald-700 flex items-center gap-1.5 font-bold text-xs">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Verified Identity</span>
+                  <span>{t('auth.trustVerified')}</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-snug">
                   Simulated digital identity validation for patients and professionals.
@@ -96,7 +99,7 @@ export const LoginPage: React.FC = () => {
               <div className="bg-white border border-slate-200 rounded-lg p-3.5 space-y-1 shadow-2xs">
                 <div className="text-teal-800 flex items-center gap-1.5 font-bold text-xs">
                   <Lock className="w-4 h-4 text-teal-600" />
-                  <span>Consent Controlled</span>
+                  <span>{t('auth.trustConsent')}</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-snug">
                   Patients decide which categories of health data to share with reviewers.
@@ -106,7 +109,7 @@ export const LoginPage: React.FC = () => {
               <div className="bg-white border border-slate-200 rounded-lg p-3.5 space-y-1 shadow-2xs">
                 <div className="text-blue-900 flex items-center gap-1.5 font-bold text-xs">
                   <UserCheck className="w-4 h-4 text-blue-700" />
-                  <span>Human Reviewed</span>
+                  <span>{t('auth.trustHuman')}</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-snug">
                   Assists qualified clinicians. Never replaces medical judgment.
@@ -125,7 +128,7 @@ export const LoginPage: React.FC = () => {
                 <div className="w-full max-w-sm py-2 px-3 rounded-md bg-slate-50 border border-slate-200 text-center font-semibold text-slate-700 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-teal-600" />
-                    <span>Patient Information</span>
+                    <span>{t('auth.patientRoleTitle')}</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">Symptoms • Voice • OCR</span>
                 </div>
@@ -147,7 +150,7 @@ export const LoginPage: React.FC = () => {
                 <div className="w-full max-w-sm py-2 px-3 rounded-md bg-emerald-50 border border-emerald-200 text-center font-semibold text-emerald-950 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Stethoscope className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Healthcare Professional</span>
+                    <span>{t('auth.clinicalRoleTitle')}</span>
                   </span>
                   <span className="text-[10px] text-emerald-800 font-mono">Clinical Review & Care</span>
                 </div>
@@ -160,7 +163,7 @@ export const LoginPage: React.FC = () => {
           <div className="pt-4 border-t border-slate-200 text-[11px] text-slate-500 flex items-center gap-2">
             <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
             <span>
-              <strong>Educational Prototype — Triage Support Only:</strong> Information generated is advisory and must be reviewed by a qualified healthcare professional.
+              <strong>{t('common.educationalPrototype')}:</strong> {t('common.prototypeNotice')}
             </span>
           </div>
 
@@ -169,18 +172,23 @@ export const LoginPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* RIGHT PANEL — AUTHENTICATION CARD (Section 5, 6, 14 Spec: 45% width)      */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-5 p-8 sm:p-10 flex flex-col justify-center bg-white">
-          <div className="max-w-md w-full mx-auto space-y-6">
+        <div className="lg:col-span-5 p-8 sm:p-10 flex flex-col justify-center bg-white relative">
+          {/* Top-right Language Selector for Quick Accessibility (Section 3 Spec) */}
+          <div className="absolute top-4 right-4 z-10">
+            <LanguageSelector variant="compact" />
+          </div>
+
+          <div className="max-w-md w-full mx-auto space-y-6 pt-6 sm:pt-0">
             
             {/* VIEW 1: Role Selection Cards (Section 5 Spec) */}
             {viewState === 'CHOICE' && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-extrabold text-[#0A1E3F] tracking-tight">
-                    Welcome to CAREQ
+                    {t('auth.welcomeTitle')}
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    Choose how you want to continue.
+                    {t('auth.welcomeSubtitle')}
                   </p>
                 </div>
 
@@ -193,10 +201,10 @@ export const LoginPage: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-bold text-sm text-slate-900">
-                          Patient
+                          {t('auth.patientRoleTitle')}
                         </h3>
                         <p className="text-xs text-slate-600 mt-0.5 leading-snug">
-                          Access your health information, submit assessments and track healthcare-worker review.
+                          {t('auth.patientRoleDesc')}
                         </p>
                       </div>
                     </div>
@@ -205,7 +213,7 @@ export const LoginPage: React.FC = () => {
                       onClick={() => setViewState('PATIENT_SIGNIN')}
                       className="w-full py-2.5 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-md text-xs font-semibold shadow-2xs transition-all flex items-center justify-center gap-1.5"
                     >
-                      <span>Continue as Patient</span>
+                      <span>{t('auth.continuePatientBtn')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -218,10 +226,10 @@ export const LoginPage: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-bold text-sm text-slate-900">
-                          Healthcare Professional
+                          {t('auth.clinicalRoleTitle')}
                         </h3>
                         <p className="text-xs text-slate-600 mt-0.5 leading-snug">
-                          Review patient information and manage clinical triage workflows.
+                          {t('auth.clinicalRoleDesc')}
                         </p>
                       </div>
                     </div>
@@ -230,7 +238,7 @@ export const LoginPage: React.FC = () => {
                       onClick={() => setViewState('DOCTOR_SIGNIN')}
                       className="w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-md text-xs font-semibold shadow-2xs transition-all flex items-center justify-center gap-1.5"
                     >
-                      <span>Continue as Healthcare Professional</span>
+                      <span>{t('auth.continueClinicalBtn')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -243,7 +251,7 @@ export const LoginPage: React.FC = () => {
                     onClick={() => navigate('/register/patient')}
                     className="font-bold text-teal-800 hover:underline"
                   >
-                    Create an account
+                    {t('auth.createPatientAccount')}
                   </button>
                 </div>
               </div>
@@ -257,15 +265,15 @@ export const LoginPage: React.FC = () => {
                   className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Choose a different role</span>
+                  <span>{t('auth.chooseDifferentRole', 'Choose a different role')}</span>
                 </button>
 
                 <div>
                   <h2 className="text-2xl font-extrabold text-[#0A1E3F] tracking-tight">
-                    Patient Sign In
+                    {t('auth.patientSignInTitle')}
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    Enter your registered credentials to access your health portal.
+                    {t('auth.patientSignInDesc', 'Enter your registered credentials to access your health portal.')}
                   </p>
                 </div>
 
@@ -274,7 +282,7 @@ export const LoginPage: React.FC = () => {
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-bold text-slate-700 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-teal-700" />
-                      Evaluator Demo Profile:
+                      {t('auth.demoFastLogin')}:
                     </span>
                     <span className="text-[10px] text-teal-800 font-mono font-semibold">1-Click Auto-Fill</span>
                   </div>
@@ -304,7 +312,7 @@ export const LoginPage: React.FC = () => {
                 <form onSubmit={handlePatientSubmit} className="space-y-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      Mobile Number or Email
+                      {t('auth.mobileOrEmail')}
                     </label>
                     <div className="relative">
                       <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -312,7 +320,7 @@ export const LoginPage: React.FC = () => {
                         type="text"
                         value={patientIdentifier}
                         onChange={(e) => setPatientIdentifier(e.target.value)}
-                        placeholder="e.g. +91 98765 43210 or riya@careq.org"
+                        placeholder="e.g. +91 98765 43210"
                         className="w-full pl-9 p-2 bg-slate-50 border border-slate-200 rounded-md text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-hidden font-medium"
                       />
                     </div>
@@ -321,14 +329,14 @@ export const LoginPage: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="font-bold text-slate-700">
-                        Password
+                        {t('auth.password')}
                       </label>
                       <button
                         type="button"
                         onClick={() => alert('Demo prototype password recovery: Default test password is pre-filled.')}
                         className="text-[11px] text-teal-800 hover:underline"
                       >
-                        Forgot password?
+                        {t('auth.forgotPassword')}
                       </button>
                     </div>
                     <div className="relative">
@@ -346,18 +354,18 @@ export const LoginPage: React.FC = () => {
                     type="submit"
                     className="w-full py-2.5 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-md font-bold text-xs transition-all shadow-xs"
                   >
-                    Sign In
+                    {t('auth.signInBtn')}
                   </button>
                 </form>
 
                 {/* Secondary: Create Patient Account */}
                 <div className="pt-2 text-center text-xs text-slate-500 border-t border-slate-100">
-                  Don't have a patient account?{' '}
+                  {t('auth.dontHaveAccount', "Don't have a patient account?")}{' '}
                   <button
                     onClick={() => navigate('/register/patient')}
                     className="font-bold text-teal-800 hover:underline"
                   >
-                    Create Patient Account
+                    {t('auth.createPatientAccount')}
                   </button>
                 </div>
               </div>
@@ -371,15 +379,15 @@ export const LoginPage: React.FC = () => {
                   className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Choose a different role</span>
+                  <span>{t('auth.chooseDifferentRole', 'Choose a different role')}</span>
                 </button>
 
                 <div>
                   <h2 className="text-2xl font-extrabold text-[#0A1E3F] tracking-tight">
-                    Clinical Access
+                    {t('auth.clinicalSignInTitle')}
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    Secure access to the CAREQ clinical review workspace.
+                    {t('auth.clinicalSubtitle')}
                   </p>
                 </div>
 
@@ -388,7 +396,7 @@ export const LoginPage: React.FC = () => {
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-bold text-slate-700 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-teal-700" />
-                      Evaluator Clinician Profile:
+                      {t('auth.demoFastLogin')}:
                     </span>
                     <span className="text-[10px] text-teal-800 font-mono font-semibold">1-Click Auto-Fill</span>
                   </div>
@@ -418,7 +426,7 @@ export const LoginPage: React.FC = () => {
                 <form onSubmit={handleDoctorSubmit} className="space-y-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      Professional ID
+                      {t('auth.professionalId')}
                     </label>
                     <div className="relative">
                       <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -433,7 +441,7 @@ export const LoginPage: React.FC = () => {
 
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      Mobile / Email
+                      {t('auth.mobileOrEmail')}
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -449,7 +457,7 @@ export const LoginPage: React.FC = () => {
 
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      Password
+                      {t('auth.password')}
                     </label>
                     <div className="relative">
                       <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -466,7 +474,7 @@ export const LoginPage: React.FC = () => {
                     type="submit"
                     className="w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-md font-bold text-xs transition-all shadow-xs"
                   >
-                    Sign In
+                    {t('auth.signInBtn')}
                   </button>
                 </form>
 
@@ -477,7 +485,7 @@ export const LoginPage: React.FC = () => {
                     onClick={() => navigate('/register/doctor')}
                     className="font-bold text-teal-800 hover:underline"
                   >
-                    Register as Healthcare Professional
+                    {t('auth.registerDoctor')}
                   </button>
                 </div>
               </div>

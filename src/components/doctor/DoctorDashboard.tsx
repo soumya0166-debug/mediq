@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Users, 
   AlertCircle, 
@@ -33,6 +34,7 @@ export const DoctorDashboard: React.FC = () => {
     switchFacility,
     availableFacilities 
   } = useApp();
+  const { t } = useLanguage();
 
   const [showFacilityModal, setShowFacilityModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,29 +55,29 @@ export const DoctorDashboard: React.FC = () => {
   // Section 18: Four Statistics (24, 6, 8, 4)
   const stats = [
     {
-      label: 'NEW CASES',
+      label: t('clinical.newCases'),
       value: 24,
       subtext: '4 in the last hour',
       icon: Users,
-      badge: 'Active Intake'
+      badge: t('clinical.routine')
     },
     {
-      label: 'PRIORITY REVIEW',
+      label: t('clinical.priorityReview'),
       value: 6,
       subtext: 'Requires clinical attention',
       icon: AlertCircle,
       isPriority: true,
-      badge: 'Action Needed'
+      badge: t('clinical.attentionFlag')
     },
     {
-      label: 'AWAITING INFORMATION',
+      label: t('clinical.awaitingInfo'),
       value: 8,
       subtext: 'Follow-up requests pending',
       icon: HelpCircle,
-      badge: 'Patient Pending'
+      badge: t('clinical.waiting')
     },
     {
-      label: 'REFERRALS',
+      label: t('clinical.referralsCount'),
       value: 4,
       subtext: 'Prepared for specialist transfer',
       icon: Share2,
@@ -144,7 +146,7 @@ export const DoctorDashboard: React.FC = () => {
           className="self-start sm:self-auto px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all flex items-center gap-1.5 flex-shrink-0"
         >
           <ArrowRightLeft className="w-3.5 h-3.5 text-slate-500" />
-          <span>Switch Facility</span>
+          <span>{t('nav.switchFacility')}</span>
         </button>
       </div>
 
@@ -155,14 +157,14 @@ export const DoctorDashboard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
-              Clinical Review Workspace
+              {t('clinical.workspaceTitle')}
             </h1>
             <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-              Triage Support
+              {t('auth.trustHuman')}
             </span>
           </div>
           <p className="text-sm text-slate-600 mt-1">
-            AI-assisted information organization for human review
+            {t('clinical.workspaceSubtitle')}
           </p>
         </div>
 
@@ -176,11 +178,11 @@ export const DoctorDashboard: React.FC = () => {
               <span className="font-bold text-slate-900">{currentDoctor?.name || 'Dr. Ananya Sharma'}</span>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                Verified
+                {t('auth.trustVerified')}
               </span>
             </div>
             <div className="text-[11px] text-slate-500">
-              Facility: <span className="font-medium text-slate-700">{currentFacility || 'CAREQ Demo Primary Health Centre'}</span>
+              {t('nav.facility')}: <span className="font-medium text-slate-700">{currentFacility || 'CAREQ Demo Primary Health Centre'}</span>
             </div>
           </div>
         </div>
@@ -236,10 +238,10 @@ export const DoctorDashboard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
-                  Patient Review Queue
+                  {t('clinical.patientQueue')}
                 </h2>
                 <span className="bg-slate-100 text-slate-700 text-xs font-mono font-bold px-2 py-0.5 rounded">
-                  {filteredQueue.length} Active
+                  {filteredQueue.length} {t('common.active')}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -252,7 +254,7 @@ export const DoctorDashboard: React.FC = () => {
               className="self-start sm:self-auto px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition-all flex items-center gap-1.5"
             >
               <RotateCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <span>{t('common.refresh')}</span>
             </button>
           </div>
 
@@ -266,7 +268,7 @@ export const DoctorDashboard: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Patient ID / Name..."
+                placeholder={`${t('common.search')} ${t('clinical.patientId')} / ${t('clinical.patientName')}...`}
                 className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-hidden"
               />
             </div>
@@ -283,7 +285,7 @@ export const DoctorDashboard: React.FC = () => {
                     filterUrgency === 'ALL' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600'
                   }`}
                 >
-                  All
+                  {t('common.all')}
                 </button>
                 <button
                   onClick={() => setFilterUrgency('HIGH')}
@@ -292,7 +294,7 @@ export const DoctorDashboard: React.FC = () => {
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block" />
-                  Priority
+                  {t('clinical.highUrgency')}
                 </button>
                 <button
                   onClick={() => setFilterUrgency('MEDIUM')}
@@ -301,7 +303,7 @@ export const DoctorDashboard: React.FC = () => {
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-                  Attention
+                  {t('clinical.mediumUrgency')}
                 </button>
                 <button
                   onClick={() => setFilterUrgency('LOW')}
@@ -310,7 +312,7 @@ export const DoctorDashboard: React.FC = () => {
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                  Routine
+                  {t('clinical.routine')}
                 </button>
               </div>
 
@@ -322,9 +324,9 @@ export const DoctorDashboard: React.FC = () => {
                   onChange={(e) => setSortBy(e.target.value as any)}
                   className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 font-semibold"
                 >
-                  <option value="WAITING">Sort: Waiting Time</option>
-                  <option value="URGENCY">Sort: Urgency</option>
-                  <option value="AGE">Sort: Patient Age</option>
+                  <option value="WAITING">{t('common.sort')}: {t('clinical.waitingTime')}</option>
+                  <option value="URGENCY">{t('common.sort')}: {t('clinical.triageUrgency')}</option>
+                  <option value="AGE">{t('common.sort')}: {t('clinical.age')}</option>
                 </select>
               </div>
 
@@ -341,21 +343,17 @@ export const DoctorDashboard: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200 font-semibold">
               <tr>
-                <th className="py-3 px-4">Patient</th>
-                <th className="py-3 px-4">Age</th>
-                <th className="py-3 px-4">Input</th>
-                <th className="py-3 px-4">Urgency</th>
-                <th className="py-3 px-4">Waiting</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                <th className="py-3 px-4">{t('clinical.patientName')}</th>
+                <th className="py-3 px-4">{t('clinical.age')}</th>
+                <th className="py-3 px-4">{t('clinical.symptoms')}</th>
+                <th className="py-3 px-4">{t('clinical.triageUrgency')}</th>
+                <th className="py-3 px-4">{t('clinical.waitingTime')}</th>
+                <th className="py-3 px-4">{t('common.status')}</th>
+                <th className="py-3 px-4 text-right">{t('common.action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredQueue.map((a) => {
-                // Section 21 Urgency Status Indicators:
-                // HIGH PRIORITY: Red indicator (🔴 Priority)
-                // ATTENTION: Amber indicator (🟠 Attention)
-                // ROUTINE: Neutral/green indicator (⚪ Routine)
                 const isHigh = a.riskLevel === 'HIGH';
                 const isMedium = a.riskLevel === 'MEDIUM';
 
@@ -402,24 +400,24 @@ export const DoctorDashboard: React.FC = () => {
                       {isHigh ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold text-red-700 bg-red-50 border border-red-200">
                           <span className="w-2 h-2 rounded-full bg-red-600 inline-block animate-pulse" />
-                          🔴 Priority
+                          🔴 {t('clinical.highUrgency')}
                         </span>
                       ) : isMedium ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200">
                           <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                          🟠 Attention
+                          🟠 {t('clinical.mediumUrgency')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200">
                           <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
-                          ⚪ Routine
+                          ⚪ {t('clinical.routine')}
                         </span>
                       )}
                     </td>
 
                     {/* Waiting */}
                     <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                      {a.waitingMinutes} min
+                      {a.waitingMinutes} {t('common.minutes')}
                     </td>
 
                     {/* Status */}
@@ -430,8 +428,8 @@ export const DoctorDashboard: React.FC = () => {
                         a.status === 'INFO_REQUESTED' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
                         'bg-slate-100 text-slate-700'
                       }`}>
-                        {a.status === 'WAITING_REVIEW' ? 'Needs Review' :
-                         a.status === 'INFO_REQUESTED' ? 'Awaiting Info' :
+                        {a.status === 'WAITING_REVIEW' ? t('clinical.needsReview') :
+                         a.status === 'INFO_REQUESTED' ? t('clinical.awaitingInfo') :
                          a.status === 'REVIEWED' ? 'Reviewed' : a.status}
                       </span>
                     </td>
@@ -443,7 +441,7 @@ export const DoctorDashboard: React.FC = () => {
                         className="px-3 py-1.5 bg-white hover:bg-slate-50 text-[#0A1E3F] border border-slate-300 rounded-md text-xs font-bold shadow-2xs transition-all inline-flex items-center gap-1"
                       >
                         <Eye className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Open</span>
+                        <span>{t('common.open')}</span>
                       </button>
                     </td>
 
