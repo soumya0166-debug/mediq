@@ -31,7 +31,7 @@ import { DoctorReportsPage } from './components/doctor/DoctorReportsPage';
 import { DoctorAuditLogPage } from './components/doctor/DoctorAuditLogPage';
 
 // Lucide icons for mobile bottom navigation (Section 12 & 42)
-import { Home, ClipboardList, FileText, History, User } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, FileText, History, User } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { currentRoute, currentRole, navigate, setSelectedAssessmentId } = useApp();
@@ -96,8 +96,8 @@ const AppContent: React.FC = () => {
               currentRoute === '/patient/dashboard' || currentRoute === '/' ? 'text-teal-800 font-bold' : 'hover:text-slate-900'
             }`}
           >
-            <Home className="w-4 h-4" />
-            <span>Home</span>
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Dashboard</span>
           </button>
 
           <button

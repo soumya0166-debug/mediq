@@ -121,7 +121,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Credits & Copyright */}
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-400 text-[11px]">
           <div>
-            CAREQ © 2026 — Digital Health Triage Support System.
+            CAREQ © 2026 — Connected Healthcare System.
           </div>
           <div className="flex items-center gap-4">
             <span className="hover:text-slate-300 cursor-pointer" onClick={() => setPrivacyModalOpen(true)}>Consent Policy</span>

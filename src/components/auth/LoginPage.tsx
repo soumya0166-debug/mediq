@@ -41,12 +41,6 @@ export const LoginPage: React.FC = () => {
         <div className="lg:col-span-7 bg-[#0A1E3F] text-white p-8 sm:p-12 lg:p-14 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[#163B66]">
           <div className="space-y-6">
             
-            {/* National digital health label */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-careq-sm bg-white/10 text-xs font-semibold text-teal-300 border border-white/15">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-              Digital Health Triage Support
-            </div>
-
             {/* Main Headline */}
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight font-sans">

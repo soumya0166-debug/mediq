@@ -11,7 +11,8 @@ import {
   Building2,
   FileText,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  LayoutDashboard
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -49,9 +50,6 @@ export const Navbar: React.FC = () => {
                 <span className="font-extrabold text-lg text-[#0A1E3F] tracking-tight font-sans">
                   CAREQ
                 </span>
-                <span className="inline-flex items-center text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                  Digital Health Triage Support
-                </span>
               </div>
               <p className="text-[11px] text-slate-500 hidden md:block">
                 Connected health information. Faster clinical review.
@@ -64,13 +62,14 @@ export const Navbar: React.FC = () => {
             <nav className="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-600">
               <button
                 onClick={() => navigate('/patient/dashboard')}
-                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors flex items-center gap-1.5 ${
                   currentRoute === '/patient/dashboard'
                     ? 'bg-slate-100 text-[#0A1E3F] font-bold'
                     : 'hover:text-[#0A1E3F]'
                 }`}
               >
-                Home
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
               </button>
               <button
                 onClick={() => navigate('/patient/new-assessment')}

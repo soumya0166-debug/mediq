@@ -19,8 +19,6 @@ export const SafetyBanner: React.FC = () => {
             <Info className="w-3 h-3 text-teal-300" />
             100% Synthetic Patient Data
           </span>
-          <span className="hidden md:inline text-slate-400">|</span>
-          <span className="hidden md:inline text-slate-300">Digital Health Triage Support</span>
         </div>
       </div>
     </div>
