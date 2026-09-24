@@ -1,0 +1,158 @@
+export type UserRole = 'patient' | 'doctor' | 'admin';
+
+export type RiskLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export type AssessmentStatus = 'WAITING_REVIEW' | 'IN_REVIEW' | 'REVIEWED' | 'INFO_REQUESTED' | 'REFERRED';
+
+export interface PatientUser {
+  id: string; // e.g. PAT-2026-00124
+  name: string;
+  dob: string;
+  age: number;
+  gender: 'Female' | 'Male' | 'Other';
+  phone: string;
+  email: string;
+  preferredLanguage: string;
+  demoAadhaarLast4: string;
+  isVerified: boolean;
+  consentGiven: boolean;
+  address?: string;
+  emergencyContact?: string;
+}
+
+export interface DoctorUser {
+  id: string; // e.g. DOC-NMC-84920
+  name: string;
+  role: 'Doctor' | 'Medical Officer' | 'Nurse' | 'Health Worker' | 'Clinical Reviewer';
+  facility: string;
+  state: string;
+  medicalRegistrationId: string;
+  experienceYears: number;
+  phone: string;
+  email: string;
+  isVerified: boolean;
+  specialization?: string;
+}
+
+export interface ExtractedReportItem {
+  id: string;
+  reportName: string;
+  reportDate: string;
+  category: 'Hematology' | 'Radiology' | 'Biochemistry' | 'Microbiology';
+  fileName: string;
+  fileSize: string;
+  ocrConfidence: number;
+  tests: {
+    testName: string;
+    result: string;
+    unit: string;
+    referenceRange: string;
+    isAbnormal: boolean;
+    severity?: 'mild' | 'moderate' | 'critical';
+  }[];
+  summary: string;
+}
+
+export interface UrgencySignal {
+  id: string;
+  level: RiskLevel;
+  signal: string;
+  source: 'voice' | 'text' | 'report' | 'vitals';
+  confidence: number;
+  note: string;
+}
+
+export interface FollowUpQuestion {
+  id: string;
+  question: string;
+  rationale: string;
+  status: 'PENDING' | 'ASKED' | 'ANSWERED';
+  answer?: string;
+  sourceSignal?: string;
+}
+
+export interface TimelineEvent {
+  day: string;
+  title: string;
+  description: string;
+  source: 'patient_voice' | 'patient_text' | 'lab_report' | 'system';
+}
+
+export interface MissingInfoItem {
+  id: string;
+  field: string;
+  description: string;
+  importance: 'HIGH' | 'MEDIUM' | 'OPTIONAL';
+}
+
+export interface Assessment {
+  id: string; // e.g. ASM-2026-881
+  patientId: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: 'Female' | 'Male' | 'Other';
+  patientLanguage: string;
+  detectedLanguage?: string;
+  translatedEnglishText?: string;
+  rawSymptomText: string;
+  voiceTranscript?: string;
+  hasVoice: boolean;
+  hasReport: boolean;
+  hasImage: boolean;
+  imageUrls?: string[];
+  submittedAt: string;
+  waitingMinutes: number;
+  queuePosition: number;
+  riskLevel: RiskLevel;
+  status: AssessmentStatus;
+  
+  // Structured triage outputs
+  structuredSymptoms: string[];
+  reportedDuration: string;
+  reportedConcerns: string[];
+  timeline: TimelineEvent[];
+  missingInformation: MissingInfoItem[];
+  urgencySignals: UrgencySignal[];
+  followUpQuestions: FollowUpQuestion[];
+  extractedReports: ExtractedReportItem[];
+
+  // Clinical Review
+  reviewedBy?: string;
+  reviewedAt?: string;
+  clinicalNotes?: string;
+  doctorInstructions?: string;
+  referralNote?: ReferralDraft;
+}
+
+export interface ReferralDraft {
+  id: string;
+  assessmentId: string;
+  patientId: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: string;
+  referringDoctor: string;
+  referringFacility: string;
+  targetFacility: string;
+  priority: 'Immediate' | 'Urgent (within 24h)' | 'Routine OPD';
+  reasonForReferral: string;
+  presentingConcerns: string;
+  timelineSummary: string;
+  extractedFindings: string;
+  urgencySignalsList: string;
+  pendingQuestions: string;
+  attachmentsList: string[];
+  createdAt: string;
+  isDraft: boolean;
+}
+
+export interface AuditEvent {
+  id: string;
+  timestamp: string;
+  actor: string;
+  actorRole: 'Patient' | 'Healthcare Worker' | 'System OCR' | 'System Triage';
+  action: string;
+  details: string;
+  ipHash: string;
+  caseId?: string;
+}
