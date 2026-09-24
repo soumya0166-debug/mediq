@@ -151,15 +151,15 @@ export const DoctorReviewPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* ========================================================================= */}
-        {/* LEFT PANEL (Section 29): Patient Context & Compact Timeline               */}
+        {/* LEFT PANEL (Section 22): Patient Context & Health Timeline               */}
         {/* ========================================================================= */}
         <div className="lg:col-span-3 space-y-4">
           <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-4">
             
-            {/* Header: Patient */}
+            {/* Header: Patient Context */}
             <div className="border-b border-slate-100 pb-3">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Patient Context (Section 29)
+                PATIENT CONTEXT
               </span>
               <h2 className="text-xl font-extrabold text-slate-900 mt-0.5">
                 {assessment.patientName}
@@ -173,7 +173,7 @@ export const DoctorReviewPage: React.FC = () => {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-50">
                 <span className="text-slate-500">Age:</span>
-                <span className="font-semibold text-slate-900">{assessment.patientAge}</span>
+                <span className="font-semibold text-slate-900">{assessment.patientAge} years</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-50">
                 <span className="text-slate-500">Gender:</span>
@@ -185,45 +185,58 @@ export const DoctorReviewPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Verification & Consent States (Section 29) */}
+            {/* Verification & Consent States (Sections 22 & 30) */}
             <div className="space-y-2 pt-1">
               <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs">
                 <span className="font-medium text-emerald-900">Identity:</span>
-                <span className="font-bold text-emerald-800 flex items-center gap-1">
+                <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                  Verified (Demo)
+                  Verified
                 </span>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-between text-xs">
-                <span className="font-medium text-teal-900">Consent:</span>
-                <span className="font-bold text-teal-800 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-teal-500 inline-block" />
-                  Active
-                </span>
+              {/* Section 30 Healthcare Worker Consent View */}
+              <div className="p-3 rounded-lg bg-teal-50 border border-teal-200 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-teal-900">Patient Consent:</span>
+                  <span className="font-bold text-teal-800 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-teal-500 inline-block" />
+                    Active
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-[11px] font-semibold text-teal-950 pt-1.5 border-t border-teal-200/70">
+                  <span className="flex items-center gap-1">Symptoms <span className="text-teal-700">✓</span></span>
+                  <span className="flex items-center gap-1">Reports <span className="text-teal-700">✓</span></span>
+                  <span className="flex items-center gap-1">Voice <span className="text-teal-700">✓</span></span>
+                  <span className="flex items-center gap-1">Translation <span className="text-teal-700">✓</span></span>
+                </div>
               </div>
             </div>
 
-            {/* Compact Longitudinal Health Timeline Underneath (Section 29) */}
+            {/* Section 22: Health Timeline */}
             <div className="pt-3 border-t border-slate-200 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Health Timeline
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">Compact</span>
+                <span className="text-[10px] text-teal-700 font-mono font-semibold">Today</span>
               </div>
 
               <div className="space-y-2 text-xs">
-                {assessment.timeline.map((item, idx) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-0.5">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-bold text-slate-900">{item.day}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{item.source}</span>
-                    </div>
-                    <div className="font-semibold text-slate-800 text-[11px]">{item.title}</div>
-                    <p className="text-[10px] text-slate-500 leading-snug">{item.description}</p>
-                  </div>
-                ))}
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-teal-600 flex-shrink-0" />
+                  <span className="font-semibold text-slate-800">Symptoms submitted</span>
+                </div>
+                <div className="text-center text-slate-400 text-xs leading-none">↓</div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                  <span className="font-semibold text-slate-800">Report uploaded</span>
+                </div>
+                <div className="text-center text-slate-400 text-xs leading-none">↓</div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#0A1E3F] flex-shrink-0" />
+                  <span className="font-semibold text-slate-800">Information organized</span>
+                </div>
               </div>
             </div>
 
@@ -534,44 +547,54 @@ export const DoctorReviewPage: React.FC = () => {
           </div>
 
           {/* ========================================================================= */}
-          {/* Section 32: Urgency Signals Card (Restrained, focused)                    */}
+          {/* Section 23: Urgency Signals Card                                          */}
           {/* ========================================================================= */}
           <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600" />
-                Urgency Signals (Section 32)
+                Urgency Signals
               </h3>
               <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                Pre-Clinical Extraction
+                Section 23
               </span>
             </div>
 
             <div className="space-y-2">
-              {assessment.urgencySignals.map((sig) => (
-                <div
-                  key={sig.id}
-                  className="p-3 rounded-lg border text-xs flex items-start justify-between gap-3 bg-slate-50 border-slate-200"
-                >
-                  <div className="flex items-start gap-2.5">
-                    <span className="text-sm leading-none mt-0.5">
-                      {sig.level === 'HIGH' ? '🔴' : sig.level === 'MEDIUM' ? '🟠' : '⚪'}
-                    </span>
-                    <div>
-                      <div className="font-semibold text-slate-900">{sig.signal}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{sig.note}</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 flex-shrink-0">
-                    Src: {sig.source}
-                  </span>
+              <div className="p-3 rounded-lg border text-xs flex items-center justify-between gap-3 bg-red-50/50 border-red-200/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">🔴</span>
+                  <span className="font-semibold text-red-950">Breathing difficulty reported</span>
                 </div>
-              ))}
+                <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  Voice
+                </span>
+              </div>
+
+              <div className="p-3 rounded-lg border text-xs flex items-center justify-between gap-3 bg-amber-50/50 border-amber-200/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">🟠</span>
+                  <span className="font-semibold text-amber-950">Persistent fever reported</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  Text
+                </span>
+              </div>
+
+              <div className="p-3 rounded-lg border text-xs flex items-center justify-between gap-3 bg-slate-50 border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">⚪</span>
+                  <span className="font-semibold text-slate-700">No chest pain reported</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  Voice
+                </span>
+              </div>
             </div>
 
-            {/* Section 32 Mandatory Wording */}
-            <p className="text-[11px] text-slate-500 italic pt-1 text-center border-t border-slate-100">
-              Review required. These signals are not a diagnosis.
+            {/* Section 23 Mandatory Disclaimer */}
+            <p className="text-[11px] text-slate-500 italic pt-1 text-center border-t border-slate-100 font-medium">
+              These are information signals requiring professional review. They are not a diagnosis.
             </p>
           </div>
 

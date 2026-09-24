@@ -88,9 +88,9 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Dashboard */}
               <button
-                onClick={() => navigate('/doctor/dashboard')}
+                onClick={() => navigate('/clinical/dashboard')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  currentRoute === '/doctor/dashboard'
+                  currentRoute === '/clinical/dashboard' || currentRoute === '/doctor/dashboard'
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-400'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -103,9 +103,9 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Patient Queue */}
               <button
-                onClick={() => navigate('/doctor/queue')}
+                onClick={() => navigate('/clinical/queue')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  currentRoute === '/doctor/queue' && !window.location.search.includes('filter=')
+                  (currentRoute === '/clinical/queue' || currentRoute === '/doctor/queue') && !window.location.search.includes('filter=')
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-400'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -123,7 +123,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Priority Cases */}
               <button
-                onClick={() => navigate('/doctor/queue?filter=HIGH')}
+                onClick={() => navigate('/clinical/queue?filter=HIGH')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                   currentRoute.includes('filter=HIGH')
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-red-400'
@@ -143,7 +143,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* My Reviews */}
               <button
-                onClick={() => navigate('/doctor/queue?filter=REVIEWED')}
+                onClick={() => navigate('/clinical/queue?filter=REVIEWED')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                   currentRoute.includes('filter=REVIEWED')
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-400'
@@ -159,7 +159,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Follow-ups */}
               <button
-                onClick={() => navigate('/doctor/queue?filter=WAITING')}
+                onClick={() => navigate('/clinical/queue?filter=WAITING')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                   currentRoute.includes('filter=WAITING')
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-amber-400'
@@ -179,7 +179,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Referrals */}
               <button
-                onClick={() => navigate('/doctor/queue?filter=REFERRED')}
+                onClick={() => navigate('/clinical/queue?filter=REFERRED')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                   currentRoute.includes('filter=REFERRED')
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-400'
@@ -202,7 +202,7 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Health Timeline */}
               <button
-                onClick={() => navigate('/doctor/queue')}
+                onClick={() => navigate('/clinical/queue')}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
               >
                 <div className="flex items-center gap-2.5">
@@ -213,9 +213,9 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Reports */}
               <button
-                onClick={() => navigate('/doctor/reports')}
+                onClick={() => navigate('/clinical/reports')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  currentRoute === '/doctor/reports'
+                  currentRoute === '/clinical/reports' || currentRoute === '/doctor/reports'
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-400'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -246,9 +246,9 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
               {/* Audit Log */}
               <button
-                onClick={() => navigate('/doctor/audit-log')}
+                onClick={() => navigate('/clinical/audit-log')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  currentRoute === '/doctor/audit-log'
+                  currentRoute === '/clinical/audit-log' || currentRoute === '/doctor/audit-log'
                     ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-400'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}

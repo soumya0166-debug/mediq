@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Sparkles, 
@@ -11,312 +11,437 @@ import {
   Lock, 
   Calendar,
   CheckCircle2,
-  ChevronRight
+  ChevronRight,
+  Send,
+  FileCheck,
+  History,
+  MessageSquare
 } from 'lucide-react';
 import { RiskBadge } from '../common/RiskBadge';
 
 export const PatientDashboard: React.FC = () => {
-  const { currentPatient, assessments, navigate, setSelectedAssessmentId } = useApp();
+  const { 
+    currentPatient, 
+    assessments, 
+    navigate, 
+    setSelectedAssessmentId,
+    markQuestionAnswered 
+  } = useApp();
 
   const patientAssessments = assessments.filter(a => a.patientId === currentPatient?.id) || [];
   const latestAssessment = patientAssessments[0] || assessments[0];
 
-  // Check if doctor requested information on any active assessment (Section 18)
+  // Section 27: Check if healthcare worker requested information
   const pendingDoctorQuestion = latestAssessment?.followUpQuestions?.find(q => q.status === 'ASKED');
+  
+  // Section 27: Interactive response states
+  const [activeResponseMode, setActiveResponseMode] = useState<'NONE' | 'TEXT' | 'VOICE'>('NONE');
+  const [responseText, setResponseText] = useState('');
+  const [responseSubmitted, setResponseSubmitted] = useState(false);
+
+  const handleSendTextResponse = () => {
+    if (!latestAssessment || !pendingDoctorQuestion || !responseText.trim()) return;
+    markQuestionAnswered(latestAssessment.id, pendingDoctorQuestion.id, responseText);
+    setResponseSubmitted(true);
+    setActiveResponseMode('NONE');
+  };
+
+  const handleSimulateVoiceResponse = () => {
+    if (!latestAssessment || !pendingDoctorQuestion) return;
+    const voiceAnswer = 'Simulated Odia voice response: "No, breathing difficulty has slightly subsided after resting."';
+    markQuestionAnswered(latestAssessment.id, pendingDoctorQuestion.id, voiceAnswer);
+    setResponseSubmitted(true);
+    setActiveResponseMode('NONE');
+  };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
       
-      {/* Calm & Human Patient Header (Section 17) */}
+      {/* ========================================================================= */}
+      {/* Section 9: Calm & Mobile-Friendly Header                                   */}
+      {/* ========================================================================= */}
       <div className="border-b border-slate-200 pb-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="text-[11px] font-bold text-teal-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-600" />
-              Verified Patient ID: {currentPatient?.id || 'PAT-2026-00124'} ({currentPatient?.preferredLanguage})
-            </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
               Good morning, {currentPatient?.name?.split(' ')[0] || 'Riya'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
               Your CAREQ health overview
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500 font-medium">Assigned Centre:</span>
-            <span className="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-careq-sm">
-              CAREQ Demo PHC Jatni
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="text-left sm:text-right">
+              <div className="font-mono text-xs font-bold text-slate-800">
+                {currentPatient?.id || 'PAT-2026-00124'}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                <span>Identity: Verified</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ACTION REQUIRED BANNER (Section 18 - Visually Strongest) */}
-      {pendingDoctorQuestion && (
-        <div className="p-4 sm:p-5 rounded-careq-md bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-careq-xs animate-in fade-in">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-careq-sm bg-amber-500/20 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+      {/* ========================================================================= */}
+      {/* Section 27: Healthcare Worker Request & Response Card                      */}
+      {/* ========================================================================= */}
+      {pendingDoctorQuestion && !responseSubmitted && (
+        <div className="p-5 sm:p-6 rounded-xl bg-amber-50/90 border border-amber-300 text-amber-950 space-y-4 shadow-2xs animate-in fade-in">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 flex-shrink-0 mt-0.5">
               <HelpCircle className="w-5 h-5 text-amber-700" />
             </div>
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">
-                Action Required
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                Healthcare Worker Request
               </span>
-              <h3 className="font-bold text-sm text-slate-900">
-                Your healthcare worker has requested additional information
+              <h3 className="font-bold text-base text-slate-900 mt-1">
+                Additional information is required to continue the review.
               </h3>
-              <p className="text-xs text-amber-900 leading-snug">
-                "{pendingDoctorQuestion.question}"
+              <p className="text-xs text-slate-700 font-medium">
+                Question from Dr. Ananya Sharma:
               </p>
+              <div className="p-3 bg-white rounded-lg border border-amber-200 text-slate-900 font-semibold text-xs mt-1">
+                "{pendingDoctorQuestion.question}"
+              </div>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setSelectedAssessmentId(latestAssessment.id);
-              navigate('/patient/history');
-            }}
-            className="px-4 py-2 bg-[#0A1E3F] hover:bg-[#163B66] text-white rounded-careq-sm text-xs font-bold transition-colors shadow-careq-xs whitespace-nowrap self-start sm:self-auto"
-          >
-            Respond Now →
-          </button>
+
+          {/* Section 27 Buttons: Answer by Text / Answer by Voice */}
+          {activeResponseMode === 'NONE' && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 pl-0 sm:pl-13">
+              <button
+                onClick={() => setActiveResponseMode('TEXT')}
+                className="px-4 py-2 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Answer by Text</span>
+              </button>
+
+              <button
+                onClick={() => setActiveResponseMode('VOICE')}
+                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <Mic className="w-3.5 h-3.5" />
+                <span>Answer by Voice</span>
+              </button>
+            </div>
+          )}
+
+          {/* Text Input Mode */}
+          {activeResponseMode === 'TEXT' && (
+            <div className="pt-2 pl-0 sm:pl-13 space-y-2 text-xs">
+              <textarea
+                rows={2}
+                value={responseText}
+                onChange={(e) => setResponseText(e.target.value)}
+                placeholder="Type your response to the doctor here..."
+                className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-hidden focus:ring-1 focus:ring-slate-400"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSendTextResponse}
+                  className="px-4 py-1.5 bg-[#0A1E3F] text-white rounded-md font-bold text-xs"
+                >
+                  Submit Response
+                </button>
+                <button
+                  onClick={() => setActiveResponseMode('NONE')}
+                  className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-md text-xs font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Voice Input Mode */}
+          {activeResponseMode === 'VOICE' && (
+            <div className="pt-2 pl-0 sm:pl-13 p-4 bg-white rounded-lg border border-amber-200 space-y-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                <Mic className="w-4 h-4 text-teal-700 animate-pulse" />
+                <span>Tap microphone to record voice clarification in your language:</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSimulateVoiceResponse}
+                  className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-bold text-xs shadow-xs flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Send Voice Clarification</span>
+                </button>
+                <button
+                  onClick={() => setActiveResponseMode('NONE')}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* HERO CTA: Start a New Assessment (Section 17) */}
-      <div className="bg-white rounded-careq-lg p-6 sm:p-8 border border-slate-200 shadow-careq-sm space-y-5">
-        <div className="max-w-2xl space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
-            Clinical Triage Intake
+      {/* Response Submitted State (Section 27 Spec) */}
+      {responseSubmitted && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center gap-3 animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <div>
+            <div className="font-bold text-sm text-emerald-900">
+              Response Submitted
+            </div>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Your response has been transmitted to Dr. Ananya Sharma for clinical evaluation.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* Section 10: PATIENT PRIMARY ACTION (Largest Element on Dashboard)          */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-xl p-8 sm:p-10 border border-slate-200 shadow-sm space-y-6">
+        <div className="max-w-3xl space-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded">
+            Pre-Clinical Ingestion
           </span>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#0A1E3F]">
-            Start a new assessment
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
+            Start a New Assessment
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Share symptoms, voice, reports or images for healthcare-worker review. CAREQ structures your health information into a clinical triage note for faster doctor review.
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Share symptoms, voice, reports or images for healthcare-worker review.
           </p>
         </div>
 
-        {/* 3 Clean Action Triggers (Section 17) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        {/* Primary Action Button (Prominent) */}
+        <div>
+          <button
+            onClick={() => navigate('/patient/new-assessment')}
+            className="px-8 py-3.5 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg text-sm font-bold shadow-xs transition-all flex items-center gap-2"
+          >
+            <span>Start Assessment</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Secondary Quick Actions: Voice, Upload Report, Describe Symptoms (Section 10 Spec) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
           
           <button
             onClick={() => navigate('/patient/new-assessment')}
-            className="p-4 rounded-careq-md border border-slate-200 hover:border-[#0A1E3F] bg-slate-50/60 hover:bg-slate-50 text-left transition-all flex items-center justify-between group"
+            className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 text-left transition-all flex items-center justify-between group"
           >
-            <div>
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#0A1E3F]">
-                Describe Symptoms
+            <div className="flex items-center gap-2.5">
+              <Mic className="w-4 h-4 text-teal-700" />
+              <div>
+                <span className="font-bold text-xs text-slate-900 block">Voice</span>
+                <span className="text-[11px] text-slate-500">Regional speech input</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Type in Odia, Hindi, or English.
-              </p>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0A1E3F] group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
           <button
             onClick={() => navigate('/patient/new-assessment')}
-            className="p-4 rounded-careq-md border border-slate-200 hover:border-teal-700 bg-slate-50/60 hover:bg-slate-50 text-left transition-all flex items-center justify-between group"
+            className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 text-left transition-all flex items-center justify-between group"
           >
-            <div>
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-teal-800 flex items-center gap-1.5">
-                <Mic className="w-3.5 h-3.5 text-teal-700" />
-                <span>Use Voice</span>
+            <div className="flex items-center gap-2.5">
+              <FileText className="w-4 h-4 text-slate-700" />
+              <div>
+                <span className="font-bold text-xs text-slate-900 block">Upload Report</span>
+                <span className="text-[11px] text-slate-500">Automated lab OCR</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Speak naturally in your mother tongue.
-              </p>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-teal-800 group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
           <button
             onClick={() => navigate('/patient/new-assessment')}
-            className="p-4 rounded-careq-md border border-slate-200 hover:border-[#0A1E3F] bg-slate-50/60 hover:bg-slate-50 text-left transition-all flex items-center justify-between group"
+            className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 text-left transition-all flex items-center justify-between group"
           >
-            <div>
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#0A1E3F] flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-slate-700" />
-                <span>Upload Report</span>
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-slate-700" />
+              <div>
+                <span className="font-bold text-xs text-slate-900 block">Describe Symptoms</span>
+                <span className="text-[11px] text-slate-500">Text descriptions</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Automated OCR for blood tests & X-rays.
-              </p>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0A1E3F] group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
         </div>
       </div>
 
-      {/* INFORMATION HIERARCHY (Section 18) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* ========================================================================= */}
+      {/* Section 11: PATIENT CURRENT STATUS CARD                                   */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-xl p-6 sm:p-7 border border-slate-200 shadow-2xs space-y-5">
         
-        {/* Left 8 Cols: 1. Current Assessment & 3. Health Timeline */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* Current Assessment Card (Section 18) */}
-          <div className="bg-white rounded-careq-lg p-5 sm:p-6 border border-slate-200 shadow-careq-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-teal-700" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  Current Assessment
-                </h3>
-              </div>
-              <span className="text-xs font-mono text-slate-400 font-bold">
-                {latestAssessment?.id}
-              </span>
-            </div>
-
-            {latestAssessment ? (
-              <div className="space-y-3 text-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <span className="font-bold text-slate-800 text-sm">
-                      Awaiting healthcare-worker review
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RiskBadge level={latestAssessment.riskLevel} size="sm" />
-                    <span className="font-mono text-slate-500">
-                      Queue position #{latestAssessment.queuePosition}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-careq-sm bg-slate-50 border border-slate-200 text-slate-700">
-                  <strong className="text-slate-900 block text-[11px] uppercase mb-0.5">Reported Symptoms:</strong>
-                  {latestAssessment.structuredSymptoms.join(' • ')}
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    onClick={() => {
-                      setSelectedAssessmentId(latestAssessment.id);
-                      navigate('/patient/history');
-                    }}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-careq-sm transition-colors text-xs flex items-center gap-1"
-                  >
-                    <span>View Status & Timeline</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6 text-slate-400 text-xs">
-                No active assessment pending review.
-              </div>
-            )}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="font-extrabold text-base text-slate-900">
+              Current Assessment
+            </h3>
+            <span className="text-[11px] font-mono text-slate-500">
+              Case Ref: {latestAssessment?.id || 'ASM-2026-00124'}
+            </span>
           </div>
 
-          {/* Health Timeline Preview (Section 39) */}
-          <div className="bg-white rounded-careq-lg p-5 sm:p-6 border border-slate-200 shadow-careq-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-teal-700" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  Longitudinal Health Timeline
-                </h3>
-              </div>
-              <button
-                onClick={() => navigate('/patient/timeline')}
-                className="text-xs font-bold text-teal-800 hover:underline"
-              >
-                View Full Timeline →
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-3 p-3 rounded-careq-sm bg-slate-50 border border-slate-200">
-                <span className="font-mono font-bold text-slate-500 w-16 flex-shrink-0">24 Sep</span>
-                <div className="flex-1">
-                  <div className="font-bold text-slate-900">Assessment Submitted</div>
-                  <p className="text-slate-600 mt-0.5">Fever, cough, and breathing tightness recorded with Odia voice track.</p>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Completed</span>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-careq-sm bg-slate-50 border border-slate-200">
-                <span className="font-mono font-bold text-slate-500 w-16 flex-shrink-0">24 Sep</span>
-                <div className="flex-1">
-                  <div className="font-bold text-slate-900">CBC Lab Report Attached</div>
-                  <p className="text-slate-600 mt-0.5">blood_report.pdf OCR processed. Elevated WBC extracted.</p>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Processed</span>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-careq-sm bg-slate-50 border border-slate-200">
-                <span className="font-mono font-bold text-slate-500 w-16 flex-shrink-0">24 Sep</span>
-                <div className="flex-1">
-                  <div className="font-bold text-slate-900">Clinical Review In-Progress</div>
-                  <p className="text-slate-600 mt-0.5">Assigned to Dr. Ananya Sharma at CAREQ Demo PHC Jatni.</p>
-                </div>
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded">In Progress</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+              <span>Awaiting Healthcare Review</span>
+            </span>
           </div>
-
         </div>
 
-        {/* Right 4 Cols: 4. Reports & 5. Consent Center */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Reports Locker Card */}
-          <div className="bg-white rounded-careq-lg p-5 border border-slate-200 shadow-careq-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700">
-                Diagnostic Reports
-              </h3>
-              <span className="text-[10px] font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-bold">
-                1 Document
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Access machine-extracted parameters from your blood tests and imaging.
-            </p>
-            <div className="p-3 rounded-careq-sm bg-slate-50 border border-slate-200 text-xs">
-              <div className="font-bold text-slate-900">blood_report.pdf</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Complete Blood Count • OCR 97% Verified</div>
-            </div>
-            <button
-              onClick={() => navigate('/patient/reports')}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-careq-sm text-xs transition-colors"
-            >
-              Open Reports Vault →
-            </button>
-          </div>
-
-          {/* Consent Status Card (Section 16 & 38) */}
-          <div className="bg-white rounded-careq-lg p-5 border border-slate-200 shadow-careq-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-              <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-slate-700">
-                <Lock className="w-3.5 h-3.5 text-teal-700" />
-                <span>Consent & Control</span>
+        {/* Stepper Timeline (Section 11 Spec) */}
+        <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            
+            <div className="p-3 bg-white rounded-lg border border-emerald-200 space-y-1 shadow-2xs">
+              <div className="font-bold text-emerald-800 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Information submitted</span>
               </div>
-              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">
-                Active
-              </span>
+              <div className="text-[11px] text-slate-500">Symptoms & voice recorded</div>
+            </div>
+
+            <div className="p-3 bg-white rounded-lg border border-emerald-200 space-y-1 shadow-2xs">
+              <div className="font-bold text-emerald-800 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Consent recorded</span>
+              </div>
+              <div className="text-[11px] text-slate-500">Categories authorized</div>
+            </div>
+
+            <div className="p-3 bg-amber-50/70 rounded-lg border border-amber-200 space-y-1 shadow-2xs">
+              <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span>Healthcare worker review</span>
+              </div>
+              <div className="text-[11px] text-slate-600">Pending Dr. Sharma examination</div>
+            </div>
+
+            <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1 shadow-2xs opacity-75">
+              <div className="font-semibold text-slate-600 flex items-center gap-1.5">
+                <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block" />
+                <span>Follow-up if required</span>
+              </div>
+              <div className="text-[11px] text-slate-400">Next care step</div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Button: View Assessment (Section 11 Spec) */}
+        <div className="flex justify-end pt-1">
+          <button
+            onClick={() => {
+              if (latestAssessment) {
+                setSelectedAssessmentId(latestAssessment.id);
+                navigate('/patient/history');
+              }
+            }}
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
+          >
+            <span>View Assessment</span>
+            <ChevronRight className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* Section 12: PATIENT DASHBOARD CARDS (My Reports, Timeline, Requests)      */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        {/* Card 1: My Reports (Section 12 Spec: 4 documents [View Reports]) */}
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Locker Documents
+            </span>
+            <h3 className="font-extrabold text-base text-slate-900">
+              My Reports
+            </h3>
+            <div className="text-xl font-bold font-mono text-slate-800 pt-1">
+              4 documents
             </div>
             <p className="text-xs text-slate-500">
-              You control which data categories authorized doctors can view.
+              CBC panel, Chest X-ray, and Biochemistry OCR extracts.
             </p>
-            <div className="space-y-1 text-[11px] text-slate-700 font-medium">
-              <div>✓ Symptoms authorized</div>
-              <div>✓ Diagnostic reports authorized</div>
-              <div>✓ Voice transcript authorized</div>
-              <div>✓ Clinical translation authorized</div>
-            </div>
-            <button
-              onClick={() => navigate('/patient/consent')}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-careq-sm text-xs transition-colors"
-            >
-              Manage Consent Preferences →
-            </button>
           </div>
 
+          <button
+            onClick={() => navigate('/patient/reports')}
+            className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1"
+          >
+            <span>View Reports</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Card 2: Health Timeline (Section 12 Spec: Last updated: 24 Sep 2026 [View Timeline]) */}
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Care Progression
+            </span>
+            <h3 className="font-extrabold text-base text-slate-900">
+              Health Timeline
+            </h3>
+            <div className="text-xs font-semibold text-slate-700 pt-1">
+              Last updated: <span className="font-bold text-slate-900">24 Sep 2026</span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Longitudinal log of submissions, reviews, and clinical inquiries.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/patient/timeline')}
+            className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1"
+          >
+            <span>View Timeline</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Card 3: Information Requests (Section 12 Spec: 1 response required [Respond]) */}
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              Healthcare Inquiry
+            </span>
+            <h3 className="font-extrabold text-base text-slate-900">
+              Information Requests
+            </h3>
+            <div className="text-xs font-semibold text-amber-800 pt-1 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+              <span>{pendingDoctorQuestion ? '1 response required' : '0 pending requests'}</span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Clinician questions regarding breathing and thermometer readings.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              if (latestAssessment) {
+                setSelectedAssessmentId(latestAssessment.id);
+                navigate('/patient/history');
+              }
+            }}
+            className="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1"
+          >
+            <span>Respond</span>
+            <ArrowRight className="w-3.5 h-3.5 text-amber-700" />
+          </button>
         </div>
 
       </div>

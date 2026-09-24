@@ -36,6 +36,17 @@ import { LayoutDashboard, ClipboardList, FileText, History, User } from 'lucide-
 const AppContent: React.FC = () => {
   const { currentRoute, currentRole, navigate, setSelectedAssessmentId } = useApp();
 
+  // Auto-sync selectedAssessmentId when navigating to a patient review route
+  useEffect(() => {
+    if (currentRoute.startsWith('/clinical/patient/') || currentRoute.startsWith('/doctor/review/')) {
+      const parts = currentRoute.split('/');
+      const id = parts[3];
+      if (id) {
+        setSelectedAssessmentId(id);
+      }
+    }
+  }, [currentRoute, setSelectedAssessmentId]);
+
   // Route parser
   const renderRoute = () => {
     // Auth Routes
@@ -53,15 +64,20 @@ const AppContent: React.FC = () => {
     if (currentRoute === '/patient/timeline') return <PatientTimelinePage />;
     if (currentRoute === '/patient/consent') return <PatientConsentPage />;
 
-    // Doctor Routes (Nested in DoctorLayout)
-    if (currentRoute.startsWith('/doctor')) {
+    // Clinical / Healthcare Professional Routes (Nested in DoctorLayout)
+    if (currentRoute.startsWith('/clinical') || currentRoute.startsWith('/doctor')) {
       const renderDoctorContent = () => {
-        if (currentRoute === '/doctor/dashboard') return <DoctorDashboard />;
-        if (currentRoute.startsWith('/doctor/queue')) return <DoctorQueuePage />;
-        if (currentRoute.startsWith('/doctor/review') || currentRoute.startsWith('/doctor/patient')) return <DoctorReviewPage />;
-        if (currentRoute.startsWith('/doctor/referral')) return <DoctorReferralPage />;
-        if (currentRoute === '/doctor/reports') return <DoctorReportsPage />;
-        if (currentRoute === '/doctor/audit-log') return <DoctorAuditLogPage />;
+        if (currentRoute === '/clinical/dashboard' || currentRoute === '/doctor/dashboard') return <DoctorDashboard />;
+        if (currentRoute.startsWith('/clinical/queue') || currentRoute.startsWith('/doctor/queue')) return <DoctorQueuePage />;
+        if (
+          currentRoute.startsWith('/clinical/patient') || 
+          currentRoute.startsWith('/clinical/review') || 
+          currentRoute.startsWith('/doctor/review') || 
+          currentRoute.startsWith('/doctor/patient')
+        ) return <DoctorReviewPage />;
+        if (currentRoute.startsWith('/clinical/referral') || currentRoute.startsWith('/doctor/referral')) return <DoctorReferralPage />;
+        if (currentRoute === '/clinical/reports' || currentRoute === '/doctor/reports') return <DoctorReportsPage />;
+        if (currentRoute === '/clinical/audit-log' || currentRoute === '/doctor/audit-log') return <DoctorAuditLogPage />;
         return <DoctorDashboard />;
       };
 
