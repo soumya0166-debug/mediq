@@ -1,125 +1,239 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, ShieldCheck, Lock, Users, FileText, Trash2, Database, AlertCircle } from 'lucide-react';
+import { X, ShieldCheck, Lock, Users, Clock, AlertCircle, Check } from 'lucide-react';
 
 export const PrivacyModal: React.FC = () => {
-  const { isPrivacyModalOpen, setPrivacyModalOpen } = useApp();
+  const { isPrivacyModalOpen, setPrivacyModalOpen, currentPatient, updatePatientConsent } = useApp();
+
+  const [categories, setCategories] = useState(
+    currentPatient?.consentCategories || {
+      symptoms: true,
+      reports: true,
+      voiceTranscript: true,
+      translation: true,
+      previousAssessments: false,
+    }
+  );
+
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   if (!isPrivacyModalOpen) return null;
 
+  const handleToggle = (key: keyof typeof categories) => {
+    setCategories(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSave = () => {
+    updatePatientConsent(categories);
+    setSavedSuccess(true);
+    setTimeout(() => {
+      setSavedSuccess(false);
+      setPrivacyModalOpen(false);
+    }, 1000);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
-        className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200"
+        className="bg-white rounded-careq-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-careq-md border border-slate-200"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
-              <Lock className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-careq-sm bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
+              <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-extrabold text-lg text-slate-900">Privacy & Responsible AI Center</h3>
-              <p className="text-xs text-slate-500">Public Health Data Governance & Safety Framework</p>
+              <h3 className="font-extrabold text-base text-slate-900">Consent & Access Center</h3>
+              <p className="text-xs text-slate-500">CAREQ Data Governance & Patient Control Framework</p>
             </div>
           </div>
           <button 
             onClick={() => setPrivacyModalOpen(false)}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-careq-sm text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content */}
+        {/* Content (Section 38 & 51) */}
         <div className="p-6 space-y-6 text-slate-700 text-sm">
           
-          {/* Synthetic Data Alert */}
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <strong className="font-bold">Demonstration Environment Notice:</strong>
-              <p className="mt-1 text-amber-800 leading-relaxed">
-                This hackathon deployment uses 100% synthetic dummy data. Real Aadhaar numbers, biometric data, 
-                and actual protected health information (PHI) are strictly barred from entry and never collected or persisted.
+          {/* Privacy statement banner */}
+          <div className="p-3.5 rounded-careq-md bg-teal-50/70 border border-teal-200 text-teal-900 text-xs flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-teal-700 flex-shrink-0" />
+            <span>
+              <strong>Your information is shared only with authorized clinical reviewers.</strong> 
+              You can inspect and customize data category permissions below.
+            </span>
+          </div>
+
+          {/* Section 38: Who, What, Why, When */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Who has access
+              </div>
+              <p className="font-semibold text-slate-800">
+                Authorized clinical officers at {currentPatient?.assignedFacility || 'CAREQ Demo Primary Health Centre'}
+              </p>
+            </div>
+
+            <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Why they have access
+              </div>
+              <p className="font-semibold text-slate-800">
+                To perform triage priority review and prepare clinical referral notes
+              </p>
+            </div>
+
+            <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                When access expires
+              </div>
+              <p className="font-semibold text-slate-800">
+                Active triage session (auto-archives 24h post-review)
+              </p>
+            </div>
+
+            <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Security & Verification
+              </div>
+              <p className="font-semibold text-slate-800">
+                Role-Based Access Control (RBAC) + SHA-256 Audit Trail
               </p>
             </div>
           </div>
 
-          {/* Core Privacy Pillars */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
-              <div className="flex items-center gap-2 text-teal-700 font-bold text-xs uppercase tracking-wider">
-                <Database className="w-4 h-4" />
-                <span>1. Data Minimization</span>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                The triage system collects strictly the minimum symptom descriptors and lab parameters needed for triage queue prioritization.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
-              <div className="flex items-center gap-2 text-blue-700 font-bold text-xs uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4" />
-                <span>2. Explicit Consent</span>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Every patient registration records digital consent for triage-assisted information synthesis and qualified clinical review.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
-              <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs uppercase tracking-wider">
-                <Users className="w-4 h-4" />
-                <span>3. Role-Based Access</span>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Patients can only access their own profile and assessments. Clinicians can only review cases within their accredited jurisdiction.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
-              <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase tracking-wider">
-                <FileText className="w-4 h-4" />
-                <span>4. Immutable Audit Trail</span>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Every symptom entry, OCR extraction, audio conversion, and clinician review event is cryptographically logged with timestamps.
-              </p>
-            </div>
-
-          </div>
-
-          {/* Retention & Human In The Loop */}
+          {/* What they can access - Granular Category Toggles */}
           <div className="space-y-3 pt-2 border-t border-slate-200">
-            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-2">
-              <Trash2 className="w-4 h-4 text-slate-500" />
-              Ephemeral Processing & Human-In-The-Loop Principle
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              In production public health deployments, audio waveforms are discarded post-transcription. 
-              The system operates strictly as a decision-support instrument: no diagnostic label or prescription is ever issued autonomously.
-            </p>
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                What information can be accessed:
+              </h4>
+              <span className="text-[11px] text-slate-500">Toggle categories anytime</span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <div>
+                  <span className="font-bold text-slate-800 block">Reported Symptoms & Notes</span>
+                  <span className="text-[11px] text-slate-500">Text descriptions, duration, and patient concerns</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={categories.symptoms}
+                  onChange={() => handleToggle('symptoms')}
+                  className="w-4 h-4 text-teal-700 rounded border-slate-300 focus:ring-teal-600"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <div>
+                  <span className="font-bold text-slate-800 block">Uploaded Laboratory Reports</span>
+                  <span className="text-[11px] text-slate-500">OCR extracted test values, reference intervals, and flags</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={categories.reports}
+                  onChange={() => handleToggle('reports')}
+                  className="w-4 h-4 text-teal-700 rounded border-slate-300 focus:ring-teal-600"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <div>
+                  <span className="font-bold text-slate-800 block">Voice Recording Transcript</span>
+                  <span className="text-[11px] text-slate-500">Transcribed audio clip from regional language input</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={categories.voiceTranscript}
+                  onChange={() => handleToggle('voiceTranscript')}
+                  className="w-4 h-4 text-teal-700 rounded border-slate-300 focus:ring-teal-600"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <div>
+                  <span className="font-bold text-slate-800 block">English Clinical Translation</span>
+                  <span className="text-[11px] text-slate-500">Machine translation prepared for clinician understanding</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={categories.translation}
+                  onChange={() => handleToggle('translation')}
+                  className="w-4 h-4 text-teal-700 rounded border-slate-300 focus:ring-teal-600"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <div>
+                  <span className="font-bold text-slate-800 block">Previous Triage Assessments</span>
+                  <span className="text-[11px] text-slate-500">Share longitudinal history from prior visits</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={categories.previousAssessments}
+                  onChange={() => handleToggle('previousAssessments')}
+                  className="w-4 h-4 text-teal-700 rounded border-slate-300 focus:ring-teal-600"
+                />
+              </label>
+            </div>
           </div>
 
-          {/* Footer note */}
-          <div className="bg-slate-100 rounded-xl p-3 text-center text-xs text-slate-500">
-            Compliant with Digital Personal Data Protection (DPDP) Act guidelines and Ayushman Bharat Digital Mission (ABDM) standards.
+          {/* Demonstration Notice */}
+          <div className="bg-slate-100 rounded-careq-sm p-3 text-xs text-slate-500 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <strong>Demonstration Environment Notice:</strong> Real Aadhaar IDs and live biometric records are never collected. All patient tokens are synthetic demo records.
+            </div>
           </div>
 
         </div>
 
-        {/* Action button */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+        {/* Footer actions */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <button
-            onClick={() => setPrivacyModalOpen(false)}
-            className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all"
+            onClick={() => {
+              setCategories({
+                symptoms: false,
+                reports: false,
+                voiceTranscript: false,
+                translation: false,
+                previousAssessments: false,
+              });
+            }}
+            className="text-xs text-red-600 font-bold hover:underline"
           >
-            I Understand & Close
+            Revoke All Access
           </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPrivacyModalOpen(false)}
+              className="px-4 py-2 rounded-careq-sm border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-5 py-2 rounded-careq-sm bg-[#0A1E3F] hover:bg-[#163B66] text-white text-xs font-bold transition-colors shadow-careq-xs flex items-center gap-1.5"
+            >
+              {savedSuccess ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Preferences Saved!</span>
+                </>
+              ) : (
+                <span>Save Consent Preferences</span>
+              )}
+            </button>
+          </div>
         </div>
 
       </div>

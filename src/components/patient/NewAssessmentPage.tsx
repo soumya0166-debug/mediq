@@ -7,28 +7,28 @@ import {
   Square, 
   FileText, 
   Image as ImageIcon, 
-  UploadCloud, 
   Languages, 
   CheckCircle2, 
   Sparkles, 
-  AlertTriangle, 
   ArrowRight, 
   HelpCircle, 
   Trash2,
   FileCheck,
-  Volume2
+  Volume2,
+  Check,
+  Edit2,
+  Eye,
+  AlertCircle
 } from 'lucide-react';
-import { RiskBadge } from '../common/RiskBadge';
 
 export const NewAssessmentPage: React.FC = () => {
   const { currentPatient, addAssessment, navigate, addAuditEvent } = useApp();
 
-  // Mode toggles
-  const [selectedLanguage, setSelectedLanguage] = useState(currentPatient?.preferredLanguage || 'Odia');
-  const [detectedLanguage, setDetectedLanguage] = useState('ଓଡ଼ିଆ (Odia)');
-  const [showEnglishTranslation, setShowEnglishTranslation] = useState(true);
+  // Workflow Step: 01 Describe -> 02 Add Reports -> 03 Review -> 04 Share (Section 19)
+  const [assessmentStep, setAssessmentStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Input states
+  const [selectedLanguage, setSelectedLanguage] = useState(currentPatient?.preferredLanguage || 'Odia');
   const [symptomText, setSymptomText] = useState(
     'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
   );
@@ -36,16 +36,14 @@ export const NewAssessmentPage: React.FC = () => {
     'I have had severe fever and cough for 2 days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
   );
 
-  // Voice recording state
-  const [isRecording, setIsRecording] = useState(false);
+  // Voice recording state (Section 21)
+  const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'captured'>('captured');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [hasVoiceInput, setHasVoiceInput] = useState(true);
   const [voiceTranscript, setVoiceTranscript] = useState(
-    '[00:00 - 00:14] ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
+    'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
   );
 
-  // Uploaded report state
-  const [selectedReportId, setSelectedReportId] = useState<string | null>('SAMPLE-CBC');
+  // Document upload state (Section 22)
   const [uploadedReports, setUploadedReports] = useState<ExtractedReportItem[]>([
     {
       id: 'REP-CBC-NEW',
@@ -53,87 +51,64 @@ export const NewAssessmentPage: React.FC = () => {
       reportDate: '2026-09-24',
       category: 'Hematology',
       fileName: 'blood_report.pdf',
-      fileSize: '412 KB',
+      fileSize: '2.4 MB',
       ocrConfidence: 0.97,
       tests: SAMPLE_REPORTS_LIBRARY[0].tests,
       summary: 'Automated cell counter values demonstrate significant leukocytosis with elevated Neutrophils.'
     }
   ]);
 
-  // Uploaded image state
   const [hasImage, setHasImage] = useState(false);
-
-  // Pre-Triage Synthesis Preview State (Section 11)
-  const [isPreTriageReady, setIsPreTriageReady] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
 
-  // Voice recording simulation handler
-  const handleToggleRecord = () => {
-    if (!isRecording) {
-      setIsRecording(true);
+  // Voice toggle handler
+  const handleToggleVoice = () => {
+    if (voiceState === 'idle') {
+      setVoiceState('recording');
       setRecordingSeconds(1);
       const interval = setInterval(() => {
         setRecordingSeconds(prev => {
-          if (prev >= 6) {
+          if (prev >= 5) {
             clearInterval(interval);
-            setIsRecording(false);
-            setHasVoiceInput(true);
+            setVoiceState('captured');
             return prev;
           }
           return prev + 1;
         });
       }, 1000);
+    } else if (voiceState === 'recording') {
+      setVoiceState('captured');
     } else {
-      setIsRecording(false);
-      setHasVoiceInput(true);
+      setVoiceState('idle');
     }
   };
 
-  // Pre-load regional sample for judge quick test
-  const handleSetSamplePreset = (lang: 'Odia' | 'Hindi' | 'English') => {
+  // Quick scenario preset for evaluators
+  const handleApplyPreset = (lang: 'Odia' | 'Hindi' | 'English') => {
     if (lang === 'Odia') {
       setSelectedLanguage('Odia');
-      setDetectedLanguage('ଓଡ଼ିଆ (Odia)');
       setSymptomText('ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।');
+      setVoiceTranscript('ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।');
       setEnglishTranslation('I have had continuous high fever and worsening cough for 2 days. Chest tightness and breathing discomfort since this morning.');
+      setVoiceState('captured');
     } else if (lang === 'Hindi') {
       setSelectedLanguage('Hindi');
-      setDetectedLanguage('हिन्दी (Hindi)');
       setSymptomText('पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।');
+      setVoiceTranscript('पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।');
       setEnglishTranslation('Severe right lower quadrant abdominal pain for 6 hours. Pain severely escalates during walking or coughing.');
+      setVoiceState('captured');
     } else {
       setSelectedLanguage('English');
-      setDetectedLanguage('English');
       setSymptomText('Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.');
+      setVoiceTranscript('Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.');
       setEnglishTranslation('Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.');
+      setVoiceState('captured');
     }
   };
 
-  const handleSelectSampleReport = (sampleId: string) => {
-    setSelectedReportId(sampleId);
-    const sample = SAMPLE_REPORTS_LIBRARY.find(s => s.id === sampleId);
-    if (sample) {
-      const newReport: ExtractedReportItem = {
-        id: `REP-${Date.now()}`,
-        reportName: sample.title,
-        reportDate: sample.date,
-        category: sample.badge as any,
-        fileName: `${sample.badge.toLowerCase()}_report.pdf`,
-        fileSize: '520 KB',
-        ocrConfidence: 0.96,
-        tests: sample.tests,
-        summary: sample.summary
-      };
-      setUploadedReports([newReport]);
-    }
-  };
-
-  const handlePrepareForReview = () => {
-    setIsPreTriageReady(true);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  };
-
-  const handleSubmitForReview = () => {
+  // Final submission handler
+  const handleFinalSubmit = () => {
     setIsSubmitting(true);
     const newId = `ASM-2026-${Date.now().toString().slice(-5)}`;
     
@@ -144,11 +119,11 @@ export const NewAssessmentPage: React.FC = () => {
       patientAge: currentPatient?.age || 34,
       patientGender: currentPatient?.gender || 'Female',
       patientLanguage: selectedLanguage,
-      detectedLanguage: detectedLanguage,
+      detectedLanguage: selectedLanguage,
       translatedEnglishText: englishTranslation,
       rawSymptomText: symptomText,
-      voiceTranscript: hasVoiceInput ? voiceTranscript : undefined,
-      hasVoice: hasVoiceInput,
+      voiceTranscript: voiceState === 'captured' ? voiceTranscript : undefined,
+      hasVoice: voiceState === 'captured',
       hasReport: uploadedReports.length > 0,
       hasImage: hasImage,
       imageUrls: hasImage ? ['https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=400&q=80'] : undefined,
@@ -157,6 +132,7 @@ export const NewAssessmentPage: React.FC = () => {
       queuePosition: 1,
       riskLevel: symptomText.includes('ନିଶ୍ୱାସ') || symptomText.includes('breathing') || symptomText.includes('दर्द') ? 'HIGH' : 'MEDIUM',
       status: 'WAITING_REVIEW',
+      facilityId: 'FAC-DEMO-OD-001',
       structuredSymptoms: [
         'Fever for 2 days',
         'Cough for 2 days',
@@ -168,15 +144,19 @@ export const NewAssessmentPage: React.FC = () => {
       timeline: [
         {
           day: 'Day 1',
+          date: '22 Sep 2026',
           title: 'Fever began',
           description: 'Sudden onset of fever and malaise.',
-          source: 'patient_voice'
+          source: 'patient_voice',
+          actor: 'Patient'
         },
         {
           day: 'Day 2',
+          date: '23 Sep 2026',
           title: 'Cough increased & breathing tightness',
           description: 'Cough aggravated, followed by chest tightness.',
-          source: 'patient_text'
+          source: 'patient_text',
+          actor: 'Patient'
         }
       ],
       missingInformation: [
@@ -192,7 +172,8 @@ export const NewAssessmentPage: React.FC = () => {
           signal: 'Reported breathing difficulty',
           source: 'voice',
           confidence: 0.94,
-          note: 'Acoustic voice analysis detected shallow breathing cadence and vocal strain.'
+          note: 'Acoustic voice analysis detected shallow breathing cadence and vocal strain.',
+          rawExcerpt: 'Breathing difficulty and chest tightness reported'
         },
         {
           id: 'us-2',
@@ -200,15 +181,18 @@ export const NewAssessmentPage: React.FC = () => {
           signal: 'Persistent fever for 48 hours',
           source: 'text',
           confidence: 0.96,
-          note: 'Reported continuous elevated body temperature.'
-        },
+          note: 'Reported continuous elevated body temperature.',
+          rawExcerpt: 'Fever for 2 continuous days'
+        }
+      ],
+      sourceTraceability: [
         {
-          id: 'us-3',
-          level: 'LOW',
-          signal: 'No crushing retrosternal chest pain reported',
-          source: 'text',
-          confidence: 0.91,
-          note: 'Pain characterized as respiratory stiffness rather than cardiac radiation.'
+          id: 'st-new-1',
+          statement: 'Fever and cough for 2 days with breathing discomfort',
+          sourceType: 'voice',
+          sourceLabel: 'Voice Input (Recorded Speech Audio)',
+          sourceExcerpt: symptomText,
+          confidenceScore: 0.96
         }
       ],
       followUpQuestions: [
@@ -217,28 +201,16 @@ export const NewAssessmentPage: React.FC = () => {
           question: 'Are you currently experiencing difficulty breathing while resting, or only when walking?',
           rationale: 'Clarifies whether dyspnea is at rest (emergency) or on mild exertion.',
           status: 'PENDING',
+          responseType: 'choice',
           sourceSignal: 'Breathing discomfort'
         },
         {
           id: 'fq-2',
-          question: 'What is your highest recorded temperature today?',
-          rationale: 'Quantifies grade of pyrexia.',
-          status: 'PENDING',
-          sourceSignal: 'Persistent fever'
-        },
-        {
-          id: 'fq-3',
           question: 'Do you have access to a fingertip pulse oximeter for SpO2?',
           rationale: 'Critical vital for respiratory compromise assessment.',
           status: 'PENDING',
+          responseType: 'text',
           sourceSignal: 'Missing SpO2'
-        },
-        {
-          id: 'fq-4',
-          question: 'Do you have any existing medical conditions or take daily medications?',
-          rationale: 'Screens for co-morbid risk factors.',
-          status: 'PENDING',
-          sourceSignal: 'Medical history'
         }
       ],
       extractedReports: uploadedReports
@@ -250,61 +222,97 @@ export const NewAssessmentPage: React.FC = () => {
         'Triage Case Submitted',
         currentPatient?.name || 'Riya Das',
         'Patient',
-        `Case ${newId} submitted for clinical review. Risk Level: ${newAssessment.riskLevel}`,
+        `Case ${newId} submitted for clinical review. Urgency Level: ${newAssessment.riskLevel}`,
         newId
       );
+      setSubmittedCaseId(newId);
       setIsSubmitting(false);
-      navigate('/patient/history');
+      setAssessmentStep(4);
     }, 600);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-6">
       
-      {/* Header */}
+      {/* Top Header */}
       <div className="space-y-1">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold uppercase tracking-wider">
-          <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-          Multimodal Intake Assistant
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Tell us what you're experiencing
+        <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded">
+          Guided Clinical Triage Intake
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
+          New Health Assessment
         </h1>
         <p className="text-xs sm:text-sm text-slate-500">
-          You can type, speak in your mother tongue, or upload clinic reports. Our system will organize your timeline for doctor review.
+          Share your symptoms, spoken voice, or lab reports. CAREQ structures your timeline for clinical review.
         </p>
       </div>
 
-      {/* Judge Preset Quick Switcher */}
-      <div className="bg-amber-50/80 p-3 rounded-2xl border border-amber-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="font-bold text-amber-900 flex items-center gap-1.5">
-          <Languages className="w-4 h-4 text-amber-700" />
-          Judge Demo: Load regional test scenarios:
+      {/* Guided Top Progress Bar (Section 19) */}
+      <div className="bg-white p-4 rounded-careq-md border border-slate-200 shadow-careq-xs">
+        <div className="grid grid-cols-4 gap-2 text-center text-xs">
+          {[
+            { num: '01', label: 'Describe' },
+            { num: '02', label: 'Add Reports' },
+            { num: '03', label: 'Review' },
+            { num: '04', label: 'Share' },
+          ].map((item, idx) => {
+            const stepNum = idx + 1;
+            const isActive = assessmentStep === stepNum;
+            const isCompleted = assessmentStep > stepNum;
+
+            return (
+              <div key={item.num} className="space-y-1">
+                <div className={`h-1 rounded-full transition-colors ${
+                  isCompleted ? 'bg-teal-600' : isActive ? 'bg-[#0A1E3F]' : 'bg-slate-200'
+                }`} />
+                <div className="flex items-center justify-center gap-1">
+                  <span className={`font-mono text-[11px] font-bold ${
+                    isActive ? 'text-[#0A1E3F]' : isCompleted ? 'text-teal-700' : 'text-slate-400'
+                  }`}>
+                    {item.num}
+                  </span>
+                  <span className={`text-[11px] font-semibold hidden sm:inline ${
+                    isActive ? 'text-slate-900 font-bold' : 'text-slate-500'
+                  }`}>
+                    {item.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Evaluator Quick Scenario Preset Bar */}
+      <div className="bg-slate-50 p-3 rounded-careq-md border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-bold text-slate-700 flex items-center gap-1.5">
+          <Languages className="w-3.5 h-3.5 text-teal-700" />
+          Judge demo scenarios:
         </span>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => handleSetSamplePreset('Odia')}
-            className={`px-3 py-1 rounded-xl font-bold transition-all ${
-              selectedLanguage === 'Odia' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-amber-100'
+            onClick={() => handleApplyPreset('Odia')}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors ${
+              selectedLanguage === 'Odia' ? 'bg-[#0A1E3F] text-white' : 'bg-white text-slate-700 border border-slate-200'
             }`}
           >
-            ଓଡ଼ିଆ (Odia - Fever/Breathing)
+            ଓଡ଼ିଆ (Odia - Fever/Dyspnea)
           </button>
           <button
             type="button"
-            onClick={() => handleSetSamplePreset('Hindi')}
-            className={`px-3 py-1 rounded-xl font-bold transition-all ${
-              selectedLanguage === 'Hindi' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-amber-100'
+            onClick={() => handleApplyPreset('Hindi')}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors ${
+              selectedLanguage === 'Hindi' ? 'bg-[#0A1E3F] text-white' : 'bg-white text-slate-700 border border-slate-200'
             }`}
           >
-            हिन्दी (Hindi - Abdominal Pain)
+            हिन्दी (Hindi - Abdominal)
           </button>
           <button
             type="button"
-            onClick={() => handleSetSamplePreset('English')}
-            className={`px-3 py-1 rounded-xl font-bold transition-all ${
-              selectedLanguage === 'English' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-amber-100'
+            onClick={() => handleApplyPreset('English')}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors ${
+              selectedLanguage === 'English' ? 'bg-[#0A1E3F] text-white' : 'bg-white text-slate-700 border border-slate-200'
             }`}
           >
             English
@@ -312,346 +320,414 @@ export const NewAssessmentPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Multimodal Card (Section 9) */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 space-y-6">
-        
-        {/* Language Selection Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-700 uppercase">Input Language:</span>
-            <select
-              value={selectedLanguage}
-              onChange={(e) => {
-                setSelectedLanguage(e.target.value);
-                setDetectedLanguage(e.target.value);
-              }}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800"
-            >
-              <option value="Odia">ଓଡ଼ିଆ (Odia)</option>
-              <option value="Hindi">हिन्दी (Hindi)</option>
-              <option value="English">English</option>
-              <option value="Bengali">বাংলা (Bengali)</option>
-              <option value="Tamil">தமிழ் (Tamil)</option>
-              <option value="Telugu">తెలుగు (Telugu)</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs">
-            <span className="px-2.5 py-1 bg-teal-50 text-teal-800 rounded-lg border border-teal-200 font-semibold">
-              Detected Language: {detectedLanguage}
-            </span>
-          </div>
-        </div>
-
-        {/* Text Area */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Symptom Description
-          </label>
-          <textarea
-            rows={4}
-            value={symptomText}
-            onChange={(e) => setSymptomText(e.target.value)}
-            className="w-full p-4 bg-slate-50 border border-slate-300 rounded-2xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-teal-600 transition-all leading-relaxed font-sans"
-            placeholder="Example: I have had fever and cough for 2 days..."
-          />
-        </div>
-
-        {/* Translation For Clinician Understanding */}
-        {showEnglishTranslation && (
-          <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200 space-y-1.5 animate-in fade-in">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-blue-900 flex items-center gap-1.5">
-                <Languages className="w-3.5 h-3.5 text-blue-700" />
-                Clinician English Translation Preview
-              </span>
-              <span className="text-[10px] text-blue-700 font-medium bg-blue-100 px-2 py-0.5 rounded">
-                Prepared for Doctor Review
-              </span>
-            </div>
-            <p className="text-xs text-blue-950 italic leading-relaxed">
-              "{englishTranslation}"
-            </p>
-          </div>
-        )}
-
-        {/* Multimodal Action Bar (Voice, Report, Image) */}
-        <div className="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* STEP 01: Unified Multimodal Input Workspace (Sections 20 & 21) */}
+      {assessmentStep === 1 && (
+        <div className="bg-white rounded-careq-lg p-6 sm:p-8 border border-slate-200 shadow-careq-sm space-y-6">
           
-          {/* Voice Record Simulator Button */}
-          <button
-            type="button"
-            onClick={handleToggleRecord}
-            className={`p-3.5 rounded-2xl border flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-xs ${
-              isRecording
-                ? 'bg-red-500 text-white border-red-600 animate-pulse'
-                : hasVoiceInput
-                ? 'bg-teal-50 border-teal-300 text-teal-800'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
-            }`}
-          >
-            {isRecording ? (
-              <>
-                <Square className="w-4 h-4 fill-current" />
-                <span>Recording ({recordingSeconds}s)... Click Stop</span>
-              </>
-            ) : (
-              <>
-                <Mic className="w-4 h-4 text-teal-700" />
-                <span>{hasVoiceInput ? '✓ Voice Clip Recorded (14s)' : '🎤 Record Voice'}</span>
-              </>
-            )}
-          </button>
-
-          {/* Sample Report Picker */}
-          <button
-            type="button"
-            onClick={() => handleSelectSampleReport('SAMPLE-CBC')}
-            className={`p-3.5 rounded-2xl border flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-xs ${
-              uploadedReports.length > 0
-                ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-indigo-700" />
-            <span>{uploadedReports.length > 0 ? '✓ blood_report.pdf (Attached)' : '📎 Attach Medical Report'}</span>
-          </button>
-
-          {/* Image Toggle */}
-          <button
-            type="button"
-            onClick={() => setHasImage(!hasImage)}
-            className={`p-3.5 rounded-2xl border flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-xs ${
-              hasImage
-                ? 'bg-amber-50 border-amber-300 text-amber-900'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
-            }`}
-          >
-            <ImageIcon className="w-4 h-4 text-amber-700" />
-            <span>{hasImage ? '✓ Clinical Photo Attached' : '📷 Add Clinical Photo'}</span>
-          </button>
-
-        </div>
-
-        {/* Live Audio Waveform Simulation (if voice active) */}
-        {hasVoiceInput && (
-          <div className="bg-slate-900 text-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center flex-shrink-0">
-                <Volume2 className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-white block">Patient Voice Track (Odia Acoustic Input)</span>
-                <span className="text-[11px] text-slate-400">Duration: 0:14 • Confidence: 96.2%</span>
-              </div>
-            </div>
-
-            {/* Simulated Animated Waveform Bars */}
-            <div className="flex items-center gap-1 h-6">
-              {[4, 12, 18, 24, 16, 20, 8, 22, 14, 26, 18, 10, 6].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-1 bg-cyan-400 rounded-full transition-all duration-300"
-                  style={{ height: `${h}px` }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Section 10: Patient Report Upload & OCR Extraction Card */}
-      {uploadedReports.length > 0 && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+          {/* Header with Compact Source Chips (Section 20) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                Optical Character Recognition (OCR) Engine
-              </span>
-              <h3 className="text-base font-bold text-slate-900 mt-1 flex items-center gap-2">
-                <FileCheck className="w-5 h-5 text-teal-700" />
-                Information extracted from report
-              </h3>
+              <h2 className="text-base font-bold text-slate-900">
+                Step 01: Describe what you are experiencing
+              </h2>
+              <p className="text-xs text-slate-500">
+                Type your symptoms or use the microphone to speak in your regional language.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
-                blood_report.pdf
+
+            {/* Compact Source Chips (Section 20) */}
+            <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
+              <span className={`px-2 py-0.5 rounded border ${symptomText ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                TEXT {symptomText ? '✓' : ''}
               </span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                ✓ OCR Processed (97% Conf.)
+              <span className={`px-2 py-0.5 rounded border ${voiceState === 'captured' ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                VOICE {voiceState === 'captured' ? '✓' : ''}
+              </span>
+              <span className={`px-2 py-0.5 rounded border ${uploadedReports.length > 0 ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                REPORT {uploadedReports.length > 0 ? '✓' : ''}
+              </span>
+              <span className={`px-2 py-0.5 rounded border ${hasImage ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                IMAGE {hasImage ? '✓' : ''}
               </span>
             </div>
           </div>
 
-          <div className="p-3 bg-amber-50 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span>
-              <strong>Clinical Guardrail:</strong> Report values are extracted strictly as structured laboratory observations for doctor review. No automated diagnostic interpretation is made.
-            </span>
-          </div>
-
-          {/* Extracted Parameters Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-2.5 px-3">Test Parameter</th>
-                  <th className="py-2.5 px-3">Extracted Result</th>
-                  <th className="py-2.5 px-3">Reference Range</th>
-                  <th className="py-2.5 px-3">Flag</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {uploadedReports[0].tests.map((t, idx) => (
-                  <tr key={idx} className={t.isAbnormal ? 'bg-amber-50/50' : ''}>
-                    <td className="py-2 px-3 font-semibold text-slate-800">{t.testName}</td>
-                    <td className="py-2 px-3 font-mono font-bold text-slate-900">
-                      {t.result} <span className="text-slate-500 text-[10px]">{t.unit}</span>
-                    </td>
-                    <td className="py-2 px-3 text-slate-500">{t.referenceRange}</td>
-                    <td className="py-2 px-3">
-                      {t.isAbnormal ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                          Outside Reference Range
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">Normal</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Button to Trigger Synthesis */}
-      {!isPreTriageReady && (
-        <div className="text-center pt-2">
-          <button
-            type="button"
-            onClick={handlePrepareForReview}
-            className="px-8 py-3.5 bg-blue-900 hover:bg-blue-950 text-white rounded-2xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 mx-auto"
-          >
-            <Sparkles className="w-4 h-4 text-cyan-300" />
-            <span>Prepare Information for Review</span>
-          </button>
-        </div>
-      )}
-
-      {/* Section 11: Patient Assessment Result / Pre-Triage Organization */}
-      {isPreTriageReady && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-teal-600/30 space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-          
-          <div className="border-b border-slate-200 pb-4">
-            <span className="text-xs font-bold text-teal-800 uppercase tracking-wider bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">
-              Triage Note Preparation
-            </span>
-            <h2 className="text-xl font-extrabold text-slate-900 mt-1">
-              Your information has been organized for healthcare-worker review
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Review what our assistant extracted and what additional vitals the clinic doctor will ask for
-            </p>
-          </div>
-
-          {/* Grid: Information Collected vs Information Still Needed */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Voice UI with Large Circular Microphone (Section 21) */}
+          <div className="p-6 rounded-careq-md bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center space-y-4">
             
-            {/* Information Collected */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Information Collected
-              </h3>
-              
-              <div className="space-y-2 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Reported Symptoms:</span>
-                  <span className="font-bold text-slate-800">Fever, cough, fatigue, breathing discomfort</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Duration:</span>
-                  <span className="font-semibold text-slate-800">2 days (acute worsening today)</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Reported Concerns:</span>
-                  <span className="font-semibold text-slate-800">Breathing discomfort while lying down</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Uploaded Reports:</span>
-                  <span className="font-semibold text-slate-800">1 (Complete Blood Count PDF)</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Language Processed:</span>
-                  <span className="font-semibold text-slate-800">Odia → English translation ready</span>
-                </div>
+            {/* Circular Mic Button */}
+            <button
+              type="button"
+              onClick={handleToggleVoice}
+              className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-careq-xs ${
+                voiceState === 'recording'
+                  ? 'bg-red-600 text-white ring-4 ring-red-200 animate-pulse'
+                  : voiceState === 'captured'
+                  ? 'bg-teal-700 text-white ring-4 ring-teal-100'
+                  : 'bg-[#0A1E3F] hover:bg-[#163B66] text-white'
+              }`}
+              title="Voice recording"
+            >
+              {voiceState === 'recording' ? <Square className="w-6 h-6 fill-current" /> : <Mic className="w-7 h-7" />}
+            </button>
+
+            {/* Voice Status Text (Section 21) */}
+            <div className="space-y-0.5">
+              <div className="font-bold text-sm text-slate-900">
+                {voiceState === 'recording' && `Listening... (${recordingSeconds}s)`}
+                {voiceState === 'captured' && 'Voice captured ✓'}
+                {voiceState === 'idle' && 'Tap to speak'}
               </div>
+              <p className="text-[11px] text-slate-500">
+                {voiceState === 'captured' ? 'Audio stream transcribed in Odia' : 'Speak naturally in Odia, Hindi, or English'}
+              </p>
             </div>
 
-            {/* Information Still Needed */}
-            <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4 text-amber-600" />
-                Information Still Needed (For Doctor)
-              </h3>
-              
-              <ul className="space-y-2 text-xs text-amber-950">
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600 font-bold">•</span>
-                  <span><strong>Temperature:</strong> Exact thermometer reading in °F or °C?</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600 font-bold">•</span>
-                  <span><strong>Oxygen Saturation:</strong> Finger pulse oximeter (SpO2) if available?</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600 font-bold">•</span>
-                  <span><strong>Chest Pain:</strong> Any sharp or retrosternal cardiac-type pain?</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-600 font-bold">•</span>
-                  <span><strong>Medical History:</strong> Any existing asthma, diabetes, or medication?</span>
-                </li>
-              </ul>
-            </div>
-
+            {/* Audio Waveform visualization */}
+            {voiceState === 'captured' && (
+              <div className="flex items-center gap-1 h-6 pt-1">
+                {[6, 14, 22, 16, 26, 18, 12, 24, 16, 8].map((h, i) => (
+                  <span
+                    key={i}
+                    className="w-1 bg-teal-600 rounded-full"
+                    style={{ height: `${h}px` }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Mandatory Critical Safety Rule Banner */}
-          <div className="p-4 rounded-2xl bg-slate-900 text-white text-xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4" />
+          {/* Text Input Area */}
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">
+                Symptom Text Description
+              </label>
+              <span className="text-slate-400">Language: {selectedLanguage}</span>
             </div>
-            <div>
-              <strong className="text-cyan-300 font-bold">Important Safety Confirmation:</strong>
-              <p className="text-slate-300 text-[11px] mt-0.5">
-                This system does not declare a medical diagnosis or prescribe treatments. Your structured triage note will be sent directly to the licensed on-duty healthcare worker queue.
+            <textarea
+              rows={3}
+              value={symptomText}
+              onChange={(e) => setSymptomText(e.target.value)}
+              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-careq-sm text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-[#0A1E3F]"
+              placeholder="Describe what you feel (e.g. fever for 2 days, difficulty breathing)..."
+            />
+          </div>
+
+          {/* Section 21: Clear distinction between Original and Translated for review */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3.5 rounded-careq-sm bg-slate-50 border border-slate-200 space-y-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Original Input ({selectedLanguage})
+              </div>
+              <p className="text-slate-800 font-medium leading-relaxed">
+                "{symptomText}"
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-careq-sm bg-teal-50/50 border border-teal-200 space-y-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-teal-800">
+                Translated for Review (English)
+              </div>
+              <p className="text-teal-950 font-medium leading-relaxed italic">
+                "{englishTranslation}"
               </p>
             </div>
           </div>
 
-          {/* Final Submit Button */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-xs text-slate-500">
-              Estimated initial review time: <strong>4-8 minutes</strong> (Priority Queue)
-            </div>
+          <div className="pt-4 flex justify-between items-center border-t border-slate-200 text-xs">
             <button
               type="button"
-              onClick={handleSubmitForReview}
-              disabled={isSubmitting}
-              className="w-full sm:w-auto px-8 py-3.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg shadow-teal-700/20 transition-all flex items-center justify-center gap-2"
+              onClick={() => navigate('/patient/dashboard')}
+              className="text-slate-500 hover:text-slate-800 font-semibold"
             >
-              {isSubmitting ? (
-                <span>Synthesizing & Submitting...</span>
-              ) : (
-                <>
-                  <span>Submit for Healthcare Worker Review</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssessmentStep(2)}
+              className="px-5 py-2.5 bg-[#0A1E3F] hover:bg-[#163B66] text-white font-bold rounded-careq-sm transition-colors flex items-center gap-1.5"
+            >
+              <span>Continue to Step 02: Add Reports</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+      )}
+
+      {/* STEP 02: Document Processing UI (Section 22) */}
+      {assessmentStep === 2 && (
+        <div className="bg-white rounded-careq-lg p-6 sm:p-8 border border-slate-200 shadow-careq-sm space-y-6">
+          
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-base font-bold text-slate-900">
+              Step 02: Add Medical Report
+            </h2>
+            <p className="text-xs text-slate-500">
+              Upload laboratory blood tests or X-rays for automated OCR parameter extraction.
+            </p>
+          </div>
+
+          {/* Document Processing Card (Section 22) */}
+          <div className="p-5 rounded-careq-md bg-slate-50 border border-slate-200 space-y-4">
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-careq-sm bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900 text-sm">
+                    blood_report.pdf
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono">
+                    2.4 MB • Complete Blood Count
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Processing Checkpoints (Section 22) */}
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-teal-800 font-semibold">
+                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  ✓ Uploaded
+                </span>
+                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  ✓ OCR processed
+                </span>
+                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  ✓ Information extracted
+                </span>
+                <span className="flex items-center gap-1 bg-teal-100 text-teal-900 px-2 py-0.5 rounded font-bold">
+                  ✓ Ready for review
+                </span>
+              </div>
+            </div>
+
+            {/* Extracted Fields in Structured Table (Section 22) */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-3">Test Parameter</th>
+                    <th className="py-2 px-3">Result</th>
+                    <th className="py-2 px-3">Reference Range</th>
+                    <th className="py-2 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {uploadedReports[0].tests.map((t, idx) => (
+                    <tr key={idx} className={t.isAbnormal ? 'bg-amber-50/40' : ''}>
+                      <td className="py-2 px-3 font-semibold text-slate-800">{t.testName}</td>
+                      <td className="py-2 px-3 font-mono font-bold text-slate-900">
+                        {t.result} <span className="text-slate-400 text-[10px] font-normal">{t.unit}</span>
+                      </td>
+                      <td className="py-2 px-3 text-slate-500 font-mono text-[11px]">{t.referenceRange}</td>
+                      <td className="py-2 px-3">
+                        {t.isAbnormal ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                            Attention Flag
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Normal</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <div className="pt-4 flex justify-between items-center border-t border-slate-200 text-xs">
+            <button
+              type="button"
+              onClick={() => setAssessmentStep(1)}
+              className="text-slate-500 hover:text-slate-800 font-semibold"
+            >
+              ← Back to Describe
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssessmentStep(3)}
+              className="px-5 py-2.5 bg-[#0A1E3F] hover:bg-[#163B66] text-white font-bold rounded-careq-sm transition-colors flex items-center gap-1.5"
+            >
+              <span>Continue to Step 03: Review Information</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+      )}
+
+      {/* STEP 03: Patient Review Screen Before Submission (Section 23) */}
+      {assessmentStep === 3 && (
+        <div className="bg-white rounded-careq-lg p-6 sm:p-8 border border-slate-200 shadow-careq-sm space-y-6">
+          
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-xl font-extrabold text-[#0A1E3F]">
+              Review your information
+            </h2>
+            <p className="text-xs text-slate-500">
+              Verify all extracted details before sending to the on-duty healthcare worker.
+            </p>
+          </div>
+
+          {/* Section 23 Structured Cards with Edit / View / Remove */}
+          <div className="space-y-4 text-xs">
+            
+            {/* 1. Symptoms Card */}
+            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  1. Reported Symptoms
+                </span>
+                <button
+                  onClick={() => setAssessmentStep(1)}
+                  className="text-teal-800 hover:underline font-bold flex items-center gap-1"
+                >
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              </div>
+              <p className="text-slate-900 font-medium">
+                "{symptomText}"
+              </p>
+              <div className="text-[11px] text-slate-500">
+                Duration: <strong>2 days</strong>
+              </div>
+            </div>
+
+            {/* 2. Timeline Card */}
+            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  2. Reported Timeline
+                </span>
+                <span className="text-slate-400 text-[10px]">Auto-structured</span>
+              </div>
+              <div className="space-y-1 text-slate-700">
+                <div>• Day 1: Fever began with chills</div>
+                <div>• Day 2: Cough aggravated and breathing discomfort appeared</div>
+              </div>
+            </div>
+
+            {/* 3. Reports Card */}
+            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  3. Diagnostic Reports Attached
+                </span>
+                <button
+                  onClick={() => setAssessmentStep(2)}
+                  className="text-teal-800 hover:underline font-bold flex items-center gap-1"
+                >
+                  <Edit2 className="w-3 h-3" /> View / Change
+                </button>
+              </div>
+              <div className="font-semibold text-slate-800">
+                blood_report.pdf (CBC with Differential) — Elevated Leukocyte count extracted.
+              </div>
+            </div>
+
+            {/* 4. Voice Transcript */}
+            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  4. Voice Transcript
+                </span>
+                <span className="text-teal-800 font-mono text-[10px]">✓ Audio Attached</span>
+              </div>
+              <p className="text-slate-800 font-medium">
+                "{voiceTranscript}"
+              </p>
+            </div>
+
+            {/* 5. Translation for Clinician */}
+            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
+                5. Clinical Translation Preview
+              </span>
+              <p className="text-slate-800 italic">
+                "{englishTranslation}"
+              </p>
+            </div>
+
+          </div>
+
+          {/* Section 23 CTA */}
+          <div className="pt-4 flex justify-between items-center border-t border-slate-200 text-xs">
+            <button
+              type="button"
+              onClick={() => setAssessmentStep(2)}
+              className="text-slate-500 hover:text-slate-800 font-semibold"
+            >
+              ← Back to Reports
+            </button>
+            <button
+              type="button"
+              onClick={handleFinalSubmit}
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-[#0A1E3F] hover:bg-[#163B66] disabled:opacity-50 text-white font-bold rounded-careq-sm transition-colors shadow-careq-xs flex items-center gap-2"
+            >
+              {isSubmitting ? 'Securing & Dispatching...' : 'Submit for healthcare review'}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+      )}
+
+      {/* STEP 04: Submission Confirmation State (Section 24) */}
+      {assessmentStep === 4 && (
+        <div className="bg-white rounded-careq-lg p-6 sm:p-10 border border-slate-200 shadow-careq-sm space-y-6 text-xs animate-in zoom-in-95">
+          
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 mx-auto flex items-center justify-center font-bold">
+              <Check className="w-6 h-6 text-emerald-700" />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900">
+              Your information has been securely submitted
+            </h2>
+            <p className="text-slate-500 max-w-md mx-auto">
+              Case Reference: <strong className="font-mono text-slate-800">{submittedCaseId}</strong>
+            </p>
+          </div>
+
+          {/* Section 24 Timeline */}
+          <div className="p-5 rounded-careq-md bg-slate-50 border border-slate-200 space-y-3 max-w-lg mx-auto">
+            <div className="space-y-2 font-medium text-slate-700">
+              <div className="flex items-center gap-2 text-emerald-700">
+                <span>✓</span> Information collected
+              </div>
+              <div className="flex items-center gap-2 text-emerald-700">
+                <span>✓</span> Consent recorded
+              </div>
+              <div className="flex items-center gap-2 text-emerald-700">
+                <span>✓</span> Information organized
+              </div>
+              <div className="flex items-center gap-2 text-amber-800 font-bold">
+                <span>●</span> Waiting for healthcare-worker review
+              </div>
+            </div>
+          </div>
+
+          {/* Section 24: What happens next? */}
+          <div className="p-4 rounded-careq-md bg-blue-50/50 border border-blue-200 max-w-lg mx-auto space-y-1">
+            <div className="font-bold text-[#0A1E3F] text-xs">
+              What happens next?
+            </div>
+            <p className="text-slate-600 text-[11px] leading-relaxed">
+              An authorized healthcare worker will review the information and may request additional details or prepare a clinical referral note.
+            </p>
+          </div>
+
+          <div className="text-center pt-2">
+            <button
+              onClick={() => navigate('/patient/history')}
+              className="px-6 py-2.5 bg-[#0A1E3F] hover:bg-[#163B66] text-white font-bold rounded-careq-sm transition-colors shadow-careq-xs"
+            >
+              Track Live Status in Assessments →
             </button>
           </div>
 

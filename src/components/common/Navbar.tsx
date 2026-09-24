@@ -7,12 +7,11 @@ import {
   Stethoscope, 
   Sparkles, 
   Lock, 
-  HelpCircle,
+  LogOut,
+  Building2,
   FileText,
   Clock,
-  LogOut,
-  FolderHeart,
-  ChevronDown
+  CheckCircle2
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -20,6 +19,8 @@ export const Navbar: React.FC = () => {
     currentRole, 
     currentPatient, 
     currentDoctor, 
+    currentFacility,
+    facilityId,
     currentRoute, 
     navigate, 
     switchRole,
@@ -31,147 +32,132 @@ export const Navbar: React.FC = () => {
   const isAuthPage = currentRoute.startsWith('/login') || currentRoute.startsWith('/register') || currentRoute.startsWith('/verify');
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+        <div className="flex items-center justify-between h-16">
           
-          {/* Brand & Identity */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(currentRole === 'patient' ? '/patient/dashboard' : '/doctor/dashboard')}>
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-900 via-blue-800 to-teal-700 flex items-center justify-center text-white shadow-md shadow-blue-900/10">
-              <Activity className="w-6 h-6 text-cyan-300 stroke-[2.5]" />
+          {/* Brand & Identity (Section 3) */}
+          <div 
+            className="flex items-center gap-3 cursor-pointer select-none" 
+            onClick={() => navigate(currentRole === 'patient' ? '/patient/dashboard' : '/doctor/dashboard')}
+          >
+            <div className="w-9 h-9 rounded-careq-md bg-[#0A1E3F] flex items-center justify-center text-white shadow-careq-xs">
+              <Activity className="w-5 h-5 text-teal-400 stroke-[2.4]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg sm:text-xl text-blue-950 tracking-tight font-sans">
-                  SwasthyaSetu <span className="text-teal-600 font-black">AI</span>
+                <span className="font-extrabold text-lg text-[#0A1E3F] tracking-tight font-sans">
+                  CAREQ
                 </span>
-                <span className="hidden sm:inline-flex items-center text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-                  Triage Assistant
+                <span className="inline-flex items-center text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                  Digital Health Triage Support
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 hidden md:block">
-                Smarter information. Faster review. Better-connected care.
+                Connected health information. Faster clinical review.
               </p>
             </div>
           </div>
 
-          {/* Navigation Links (Desktop) */}
-          {!isAuthPage && (
-            <nav className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold">
-              {currentRole === 'patient' ? (
-                <>
-                  <button
-                    onClick={() => navigate('/patient/dashboard')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      currentRoute === '/patient/dashboard'
-                        ? 'bg-white text-blue-950 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => navigate('/patient/new-assessment')}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                      currentRoute === '/patient/new-assessment'
-                        ? 'bg-blue-900 text-white shadow-xs font-bold'
-                        : 'text-blue-900 hover:bg-blue-50'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                    New Assessment
-                  </button>
-                  <button
-                    onClick={() => navigate('/patient/history')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      currentRoute === '/patient/history'
-                        ? 'bg-white text-blue-950 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    History
-                  </button>
-                  <button
-                    onClick={() => navigate('/patient/reports')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      currentRoute === '/patient/reports'
-                        ? 'bg-white text-blue-950 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    My Reports
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => navigate('/doctor/dashboard')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      currentRoute === '/doctor/dashboard'
-                        ? 'bg-white text-blue-950 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    Clinical Dashboard
-                  </button>
-                  <button
-                    onClick={() => navigate('/doctor/queue')}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                      currentRoute === '/doctor/queue'
-                        ? 'bg-blue-900 text-white shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    Patient Queue
-                  </button>
-                  <button
-                    onClick={() => navigate('/doctor/reports')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      currentRoute === '/doctor/reports'
-                        ? 'bg-white text-blue-950 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    Lab OCR Vault
-                  </button>
-                  <button
-                    onClick={() => navigate('/doctor/audit-log')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      currentRoute === '/doctor/audit-log'
-                        ? 'bg-white text-blue-950 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-blue-950'
-                    }`}
-                  >
-                    Audit Trail
-                  </button>
-                </>
-              )}
+          {/* Navigation Links for Patient (Section 12) */}
+          {!isAuthPage && currentRole === 'patient' && (
+            <nav className="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-600">
+              <button
+                onClick={() => navigate('/patient/dashboard')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                  currentRoute === '/patient/dashboard'
+                    ? 'bg-slate-100 text-[#0A1E3F] font-bold'
+                    : 'hover:text-[#0A1E3F]'
+                }`}
+              >
+                Home
+              </button>
+              <button
+                onClick={() => navigate('/patient/new-assessment')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors flex items-center gap-1.5 ${
+                  currentRoute === '/patient/new-assessment'
+                    ? 'bg-[#0A1E3F] text-white font-bold'
+                    : 'text-[#0A1E3F] hover:bg-slate-100'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                New Assessment
+              </button>
+              <button
+                onClick={() => navigate('/patient/history')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                  currentRoute === '/patient/history'
+                    ? 'bg-slate-100 text-[#0A1E3F] font-bold'
+                    : 'hover:text-[#0A1E3F]'
+                }`}
+              >
+                Assessments
+              </button>
+              <button
+                onClick={() => navigate('/patient/reports')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                  currentRoute === '/patient/reports'
+                    ? 'bg-slate-100 text-[#0A1E3F] font-bold'
+                    : 'hover:text-[#0A1E3F]'
+                }`}
+              >
+                Reports
+              </button>
+              <button
+                onClick={() => navigate('/patient/timeline')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                  currentRoute === '/patient/timeline'
+                    ? 'bg-slate-100 text-[#0A1E3F] font-bold'
+                    : 'hover:text-[#0A1E3F]'
+                }`}
+              >
+                Health Timeline
+              </button>
+              <button
+                onClick={() => navigate('/patient/consent')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                  currentRoute === '/patient/consent'
+                    ? 'bg-slate-100 text-[#0A1E3F] font-bold'
+                    : 'hover:text-[#0A1E3F]'
+                }`}
+              >
+                Consent & Sharing
+              </button>
+              <button
+                onClick={() => navigate('/patient/profile')}
+                className={`px-3 py-1.5 rounded-careq-sm transition-colors ${
+                  currentRoute === '/patient/profile'
+                    ? 'bg-slate-100 text-[#0A1E3F] font-bold'
+                    : 'hover:text-[#0A1E3F]'
+                }`}
+              >
+                Profile
+              </button>
             </nav>
           )}
 
-          {/* Right Action Tools: Role Switcher, Judge Demo, Profile */}
+          {/* Right Action Tools: Role Switcher, Facility Context, Judge Demo, Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Hackathon Judge Demo Walkthrough Trigger */}
+            {/* Judge Demo Walkthrough Trigger */}
             <button
               onClick={() => setDemoGuideOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs hover:from-amber-600 hover:to-amber-700 transition-all border border-amber-600"
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-careq-sm bg-amber-500 hover:bg-amber-600 text-slate-950 transition-colors border border-amber-600 shadow-careq-xs"
               title="Open step-by-step hackathon demo flow"
             >
-              <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-100" />
+              <Sparkles className="w-3.5 h-3.5 text-slate-950" />
               <span className="hidden sm:inline">Judge Demo Guide</span>
-              <span className="sm:hidden font-black">Demo</span>
+              <span className="sm:hidden font-bold">Demo</span>
             </button>
 
             {/* Quick Role Switcher Pill */}
             {!isAuthPage && (
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-careq-sm border border-slate-200 text-xs">
                 <button
                   onClick={() => switchRole('patient')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 font-bold ${
                     currentRole === 'patient'
-                      ? 'bg-teal-700 text-white shadow-xs'
+                      ? 'bg-white text-teal-800 shadow-careq-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Switch view to Patient Experience"
@@ -181,12 +167,12 @@ export const Navbar: React.FC = () => {
                 </button>
                 <button
                   onClick={() => switchRole('doctor')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 font-bold ${
                     currentRole === 'doctor'
-                      ? 'bg-blue-900 text-white shadow-xs'
+                      ? 'bg-[#0A1E3F] text-white shadow-careq-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
-                  title="Switch view to Healthcare Worker Experience"
+                  title="Switch view to Healthcare Professional Experience"
                 >
                   <Stethoscope className="w-3 h-3" />
                   <span className="hidden sm:inline">Clinician</span>
@@ -194,31 +180,31 @@ export const Navbar: React.FC = () => {
               </div>
             )}
 
-            {/* Privacy & Trust Badge */}
+            {/* Privacy Center */}
             <button
               onClick={() => setPrivacyModalOpen(true)}
-              className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-slate-600 hover:text-blue-900 hover:bg-blue-50 text-xs font-medium border border-transparent hover:border-blue-200 transition-all flex items-center gap-1"
-              title="Open Privacy & Responsible AI Framework"
+              className="p-1.5 sm:px-2.5 sm:py-1 rounded-careq-sm text-slate-600 hover:text-[#0A1E3F] hover:bg-slate-100 text-xs font-semibold border border-transparent hover:border-slate-200 transition-colors flex items-center gap-1.5"
+              title="Open Consent & Privacy Center"
             >
               <Lock className="w-3.5 h-3.5 text-teal-600" />
-              <span className="hidden md:inline">Privacy Center</span>
+              <span className="hidden md:inline">Consent & Access</span>
             </button>
 
             {/* User Profile / Status */}
             {!isAuthPage ? (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                 <div className="text-right hidden sm:block">
-                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1 justify-end">
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1 justify-end">
                     {currentRole === 'patient' ? currentPatient?.name : currentDoctor?.name}
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" title="Verified Identity" />
                   </div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[10px] text-slate-500 font-mono">
                     {currentRole === 'patient' ? currentPatient?.id : currentDoctor?.medicalRegistrationId}
                   </div>
                 </div>
                 <button 
                   onClick={logout}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
+                  className="p-1.5 rounded-careq-sm text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors"
                   title="Sign out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -227,7 +213,7 @@ export const Navbar: React.FC = () => {
             ) : (
               <button
                 onClick={() => navigate('/login')}
-                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-900 text-white hover:bg-blue-950 transition-all"
+                className="text-xs font-bold px-3 py-1.5 rounded-careq-sm bg-[#0A1E3F] text-white hover:bg-[#163B66] transition-colors"
               >
                 Sign In
               </button>

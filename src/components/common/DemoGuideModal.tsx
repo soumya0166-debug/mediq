@@ -36,25 +36,25 @@ export const DemoGuideModal: React.FC = () => {
   const DEMO_STEPS = [
     {
       step: 1,
-      title: 'Open Authentication & Login Interface',
-      desc: 'View dual-tab authentication for Patient and Healthcare Worker with trust guarantees.',
-      actionLabel: 'Go to Login Page',
+      title: 'Digital Health Gateway (Authentication)',
+      desc: 'Dual-card authentication for Patient and Healthcare Professional with trust pillars.',
+      actionLabel: 'Go to Gateway',
       icon: UserPlus,
       execute: () => navigate('/login')
     },
     {
       step: 2,
-      title: 'Create Patient Account (Simulated Aadhaar OTP)',
-      desc: 'Simulate 3-step registration: Demographics, Mock Aadhaar OTP, and Patient Consent.',
-      actionLabel: 'Open Patient Registration',
+      title: 'Patient Digital Identity & Consent Onboarding',
+      desc: 'Simulate 4-step onboarding: Identity (Demo Aadhaar OTP), Profile, and Granular Consent.',
+      actionLabel: 'Open Patient Onboarding',
       icon: UserPlus,
       execute: () => navigate('/register/patient')
     },
     {
       step: 3,
-      title: 'Multilingual Symptom Input (Odia / Hindi / English)',
-      desc: 'Voice or text symptom entry with regional language detection and instant translation.',
-      actionLabel: 'Open Assessment Creator',
+      title: 'Multimodal Symptom Intake (Odia / Hindi / English)',
+      desc: 'Voice or text entry with regional dialect recognition and clinician English translation.',
+      actionLabel: 'Open Assessment Workspace',
       icon: Mic,
       execute: () => {
         loginAsPatient('PAT-2026-00124');
@@ -63,9 +63,9 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 4,
-      title: 'Medical Report Upload (CBC / X-Ray / Metabolic)',
-      desc: 'Select sample medical reports to test automated document OCR extraction.',
-      actionLabel: 'Jump to Report Upload',
+      title: 'Medical Document Upload (CBC Blood Report)',
+      desc: 'Attach lab reports or radiology summaries to test automated OCR extraction.',
+      actionLabel: 'Jump to Document Upload',
       icon: FileSearch,
       execute: () => {
         loginAsPatient('PAT-2026-00124');
@@ -74,9 +74,9 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 5,
-      title: 'Optical Character Recognition (OCR) Processing',
-      desc: 'Examine extracted laboratory parameters, units, reference intervals, and flagged out-of-range values.',
-      actionLabel: 'View Report OCR Vault',
+      title: 'Automated OCR Parameter Extraction',
+      desc: 'Inspect parsed parameters (WBC 14,200 /µL, Neutrophils 82%) and out-of-range flags.',
+      actionLabel: 'View Lab OCR Vault',
       icon: FileSearch,
       execute: () => {
         loginAsDoctor('DOC-NMC-84920');
@@ -85,9 +85,9 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 6,
-      title: 'AI Synthesis (Summary, Timeline, Missing Info, Signals)',
-      desc: 'Review structured synthesis: chronological symptom timeline, missing vitals, and urgency tags.',
-      actionLabel: 'Inspect Synthesized Case',
+      title: 'AI Pre-Triage Synthesis (Timeline & Gaps)',
+      desc: 'Review structured synthesis: chronological timeline, missing vitals checklist, and urgency flags.',
+      actionLabel: 'Inspect Synthesized Review',
       icon: Layers,
       execute: () => {
         loginAsDoctor('DOC-NMC-84920');
@@ -97,8 +97,8 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 7,
-      title: 'Patient Submission & Live Status Tracking',
-      desc: 'Patient status screen showing queue position and stage progression.',
+      title: 'Patient Submission & Real-Time Tracking',
+      desc: 'Patient overview tracking 5-stage progression and queue position.',
       actionLabel: 'View Patient History & Status',
       icon: Send,
       execute: () => {
@@ -108,8 +108,8 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 8,
-      title: 'Switch Role to Healthcare Worker',
-      desc: 'Switch to Dr. Ananya Sharma (NMC Verified Medical Officer).',
+      title: 'Role Switch to Clinician (Dr. Ananya Sharma)',
+      desc: 'Switch to Dr. Ananya Sharma (Medical Officer at CAREQ Demo PHC Jatni).',
       actionLabel: 'Switch to Clinician Mode',
       icon: Stethoscope,
       execute: () => {
@@ -118,9 +118,9 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 9,
-      title: 'Clinical Dashboard & Triage Queue Prioritization',
-      desc: 'High-density doctor dashboard with synthetic stats, priority filters, and queue badges.',
-      actionLabel: 'Open Doctor Queue',
+      title: 'Clinical Review Workspace & Priority Queue',
+      desc: 'High-density command center with restrained risk signal tags (🔴 HIGH PRIORITY).',
+      actionLabel: 'Open Patient Queue',
       icon: Eye,
       execute: () => {
         loginAsDoctor('DOC-NMC-84920');
@@ -129,8 +129,8 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 10,
-      title: '3-Column Case Review Workspace',
-      desc: 'Left: Patient info; Center: Multimodal tabs; Right: Clinical actions.',
+      title: '3-Panel Clinical Review Workspace',
+      desc: 'Left: Patient context; Center: Information intelligence; Right: Review actions.',
       actionLabel: 'Open Case ASM-2026-00124',
       icon: Layers,
       execute: () => {
@@ -141,9 +141,9 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 11,
-      title: 'Multimodal Triage Note & Traceability Inspection',
-      desc: 'Check source traceability for each highlighted urgency signal (audio, report, or text).',
-      actionLabel: 'Review Multimodal Tabs',
+      title: 'Source Traceability & Urgency Signals',
+      desc: 'Inspect source attribution ([View Source]) for every AI-extracted finding.',
+      actionLabel: 'Inspect Traceability',
       icon: Eye,
       execute: () => {
         loginAsDoctor('DOC-NMC-84920');
@@ -153,9 +153,9 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 12,
-      title: 'Clinician Follow-Up Questions',
-      desc: 'Interactive prompts generated by AI to fill missing information (e.g. SpO2, temperature).',
-      actionLabel: 'Inspect Follow-Up Prompts',
+      title: 'Clinician ↔ Patient Follow-Up Loop',
+      desc: 'Doctor requests missing vitals (e.g. SpO2); patient receives and responds in real-time.',
+      actionLabel: 'Test Follow-Up Questions',
       icon: HelpCircle,
       execute: () => {
         loginAsDoctor('DOC-NMC-84920');
@@ -165,8 +165,8 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 13,
-      title: 'Clinical Action: Referral Note Draft Generator',
-      desc: 'Draft structured referral note with receiving tertiary facility, copy to clipboard, and print PDF.',
+      title: 'Institutional Referral Note Draft',
+      desc: 'Structured referral draft for tertiary care handover (SCB Medical College) with copy/print.',
       actionLabel: 'Open Referral Generator',
       icon: Share2,
       execute: () => {
@@ -177,8 +177,8 @@ export const DemoGuideModal: React.FC = () => {
     },
     {
       step: 14,
-      title: 'Comprehensive Compliance Audit Log',
-      desc: 'Cryptographic chronological record of all patient submissions, OCR events, and doctor actions.',
+      title: 'Activity & Audit Trail Verification',
+      desc: 'Cryptographic event ledger logging all intake, OCR, and doctor actions with SHA-256 hashes.',
       actionLabel: 'Open Audit Log',
       icon: History,
       execute: () => {
@@ -211,100 +211,95 @@ export const DemoGuideModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
-        className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-hidden shadow-2xl border border-slate-200 flex flex-col"
+        className="bg-white rounded-careq-xl max-w-3xl w-full max-h-[92vh] overflow-hidden shadow-careq-md border border-slate-200 flex flex-col"
         role="dialog"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-950 via-indigo-900 to-blue-900 text-white px-6 py-4 flex items-center justify-between">
+        <div className="bg-[#0A1E3F] text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
-              <Sparkles className="w-5 h-5 text-slate-950" />
+            <div className="w-8 h-8 rounded-careq-sm bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold">
+              <Sparkles className="w-4 h-4 text-teal-300" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base sm:text-lg">Hackathon Evaluation Walkthrough</h3>
-                <span className="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
+                <h3 className="font-extrabold text-base">CAREQ Evaluator Walkthrough</h3>
+                <span className="bg-teal-500/20 text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded border border-teal-500/30">
                   Step {demoGuideStep} of 14
                 </span>
               </div>
               <p className="text-xs text-slate-300">
-                14-Step Human-in-the-Loop Triage Demonstration for Judges
+                14-Stage Human-in-the-Loop Digital Health Triage Evaluation
               </p>
             </div>
           </div>
           <button 
             onClick={() => setDemoGuideOpen(false)}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Current Active Step Banner */}
-        <div className="bg-amber-50/70 border-b border-amber-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <span className="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider">
-              Current Active Demonstration Step
+        <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">
+              Active Demonstration Step
             </span>
-            <h4 className="font-extrabold text-slate-900 text-base">
+            <h4 className="font-extrabold text-slate-900 text-sm sm:text-base">
               Step {currentStepData.step}: {currentStepData.title}
             </h4>
             <p className="text-xs text-slate-600">
               {currentStepData.desc}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => {
-                currentStepData.execute();
-                setDemoGuideOpen(false);
-              }}
-              className="px-4 py-2 bg-blue-950 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-blue-900 transition-all flex items-center gap-1.5"
-            >
-              <Play className="w-3.5 h-3.5 fill-current text-cyan-300" />
-              <span>Launch Step {currentStepData.step}</span>
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              currentStepData.execute();
+              setDemoGuideOpen(false);
+            }}
+            className="px-4 py-2 bg-[#0A1E3F] hover:bg-[#163B66] text-white rounded-careq-sm text-xs font-bold shadow-careq-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto flex-shrink-0"
+          >
+            <Play className="w-3.5 h-3.5 fill-current text-teal-300" />
+            <span>Launch Step {currentStepData.step}</span>
+          </button>
         </div>
 
-        {/* Steps Grid / List */}
-        <div className="p-6 overflow-y-auto max-h-[48vh] space-y-2 bg-slate-50/50">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {/* Steps Grid */}
+        <div className="p-6 overflow-y-auto max-h-[48vh] space-y-2 bg-[#F8FAFC]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {DEMO_STEPS.map((item) => {
               const isActive = item.step === demoGuideStep;
               const isPassed = item.step < demoGuideStep;
-              const StepIcon = item.icon;
 
               return (
                 <div
                   key={item.step}
                   onClick={() => handleExecuteStep(item.step)}
-                  className={`p-3 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-3 ${
+                  className={`p-3 rounded-careq-md border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
                     isActive 
-                      ? 'bg-blue-50/90 border-blue-600 shadow-sm ring-2 ring-blue-500/20' 
+                      ? 'bg-blue-50 border-[#0A1E3F] shadow-careq-xs ring-1 ring-[#0A1E3F]' 
                       : isPassed
-                      ? 'bg-white border-emerald-200/80 hover:border-slate-300'
-                      : 'bg-white border-slate-200 hover:border-blue-300'
+                      ? 'bg-white border-emerald-200 hover:border-slate-300'
+                      : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                  <div className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs flex-shrink-0 ${
                     isActive 
-                      ? 'bg-blue-900 text-white' 
+                      ? 'bg-[#0A1E3F] text-white' 
                       : isPassed
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-slate-100 text-slate-600'
                   }`}>
-                    {isPassed ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : item.step}
+                    {isPassed ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : item.step}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h5 className={`text-xs font-bold truncate ${isActive ? 'text-blue-950' : 'text-slate-800'}`}>
-                        {item.title}
-                      </h5>
-                    </div>
-                    <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-snug">
+                    <h5 className={`text-xs font-bold truncate ${isActive ? 'text-[#0A1E3F]' : 'text-slate-800'}`}>
+                      {item.title}
+                    </h5>
+                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
                       {item.desc}
                     </p>
                   </div>
@@ -319,17 +314,17 @@ export const DemoGuideModal: React.FC = () => {
           <button
             onClick={handlePrevStep}
             disabled={demoGuideStep <= 1}
-            className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="px-4 py-2 rounded-careq-sm text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             ← Previous Step
           </button>
-          <div className="text-xs font-semibold text-slate-500 hidden sm:block">
-            Click any step above to jump directly
+          <div className="text-xs font-medium text-slate-500 hidden sm:block">
+            Click any step to jump directly
           </div>
           <button
             onClick={handleNextStep}
             disabled={demoGuideStep >= DEMO_STEPS.length}
-            className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-900 hover:bg-blue-950 text-white flex items-center gap-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="px-5 py-2 rounded-careq-sm text-xs font-bold bg-[#0A1E3F] hover:bg-[#163B66] text-white flex items-center gap-1.5 shadow-careq-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <span>Next Step</span>
             <ArrowRight className="w-3.5 h-3.5" />

@@ -4,6 +4,22 @@ export type RiskLevel = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export type AssessmentStatus = 'WAITING_REVIEW' | 'IN_REVIEW' | 'REVIEWED' | 'INFO_REQUESTED' | 'REFERRED';
 
+export interface Facility {
+  id: string;
+  name: string;
+  type: string;
+  district: string;
+  state: string;
+}
+
+export interface ConsentCategories {
+  symptoms: boolean;
+  reports: boolean;
+  voiceTranscript: boolean;
+  translation: boolean;
+  previousAssessments: boolean;
+}
+
 export interface PatientUser {
   id: string; // e.g. PAT-2026-00124
   name: string;
@@ -16,8 +32,10 @@ export interface PatientUser {
   demoAadhaarLast4: string;
   isVerified: boolean;
   consentGiven: boolean;
+  consentCategories?: ConsentCategories;
   address?: string;
   emergencyContact?: string;
+  assignedFacility?: string;
 }
 
 export interface DoctorUser {
@@ -25,6 +43,7 @@ export interface DoctorUser {
   name: string;
   role: 'Doctor' | 'Medical Officer' | 'Nurse' | 'Health Worker' | 'Clinical Reviewer';
   facility: string;
+  facilityId: string; // e.g. FAC-DEMO-OD-001
   state: string;
   medicalRegistrationId: string;
   experienceYears: number;
@@ -60,6 +79,7 @@ export interface UrgencySignal {
   source: 'voice' | 'text' | 'report' | 'vitals';
   confidence: number;
   note: string;
+  rawExcerpt?: string;
 }
 
 export interface FollowUpQuestion {
@@ -67,15 +87,19 @@ export interface FollowUpQuestion {
   question: string;
   rationale: string;
   status: 'PENDING' | 'ASKED' | 'ANSWERED';
+  responseType?: 'text' | 'voice' | 'choice';
   answer?: string;
   sourceSignal?: string;
 }
 
 export interface TimelineEvent {
   day: string;
+  date?: string;
   title: string;
   description: string;
-  source: 'patient_voice' | 'patient_text' | 'lab_report' | 'system';
+  source: 'patient_voice' | 'patient_text' | 'lab_report' | 'system' | 'clinician';
+  actor?: string;
+  status?: string;
 }
 
 export interface MissingInfoItem {
@@ -85,8 +109,17 @@ export interface MissingInfoItem {
   importance: 'HIGH' | 'MEDIUM' | 'OPTIONAL';
 }
 
+export interface SourceTraceItem {
+  id: string;
+  statement: string;
+  sourceType: 'voice' | 'text' | 'report' | 'questionnaire';
+  sourceLabel: string;
+  sourceExcerpt: string;
+  confidenceScore?: number;
+}
+
 export interface Assessment {
-  id: string; // e.g. ASM-2026-881
+  id: string; // e.g. ASM-2026-00124
   patientId: string;
   patientName: string;
   patientAge: number;
@@ -105,6 +138,7 @@ export interface Assessment {
   queuePosition: number;
   riskLevel: RiskLevel;
   status: AssessmentStatus;
+  facilityId?: string;
   
   // Structured triage outputs
   structuredSymptoms: string[];
@@ -115,6 +149,7 @@ export interface Assessment {
   urgencySignals: UrgencySignal[];
   followUpQuestions: FollowUpQuestion[];
   extractedReports: ExtractedReportItem[];
+  sourceTraceability?: SourceTraceItem[];
 
   // Clinical Review
   reviewedBy?: string;
@@ -133,6 +168,7 @@ export interface ReferralDraft {
   patientGender: string;
   referringDoctor: string;
   referringFacility: string;
+  referringFacilityId?: string;
   targetFacility: string;
   priority: 'Immediate' | 'Urgent (within 24h)' | 'Routine OPD';
   reasonForReferral: string;

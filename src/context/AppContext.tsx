@@ -5,19 +5,25 @@ import {
   Assessment, 
   AuditEvent, 
   ReferralDraft, 
-  UserRole 
+  UserRole,
+  ConsentCategories,
+  Facility
 } from '../types';
 import { 
   MOCK_PATIENTS, 
   MOCK_DOCTORS, 
   INITIAL_ASSESSMENTS, 
-  INITIAL_AUDIT_LOGS 
+  INITIAL_AUDIT_LOGS,
+  CAREQ_FACILITIES
 } from '../data/mockData';
 
 interface AppContextType {
   currentRole: UserRole;
   currentPatient: PatientUser | null;
   currentDoctor: DoctorUser | null;
+  currentFacility: string;
+  facilityId: string;
+  availableFacilities: Facility[];
   currentRoute: string;
   assessments: Assessment[];
   selectedAssessment: Assessment | null;
@@ -28,6 +34,7 @@ interface AppContextType {
   demoGuideStep: number;
   navigate: (route: string) => void;
   switchRole: (role: UserRole) => void;
+  switchFacility: (facilityName: string, id: string) => void;
   setCurrentRoute: (route: string) => void;
   setSelectedAssessmentId: (id: string | null) => void;
   loginAsPatient: (patientId?: string) => void;
@@ -37,9 +44,10 @@ interface AppContextType {
   updateAssessment: (id: string, updates: Partial<Assessment>) => void;
   addAuditEvent: (action: string, actor: string, role: AuditEvent['actorRole'], details: string, caseId?: string) => void;
   markAssessmentReviewed: (assessmentId: string, clinicalNotes: string) => void;
-  requestFollowUp: (assessmentId: string, question: string, rationale: string) => void;
+  requestFollowUp: (assessmentId: string, question: string, rationale: string, responseType?: 'text' | 'voice' | 'choice') => void;
   markQuestionAnswered: (assessmentId: string, questionId: string, answer: string) => void;
   saveReferralNote: (referral: ReferralDraft) => void;
+  updatePatientConsent: (categories: ConsentCategories) => void;
   setPrivacyModalOpen: (open: boolean) => void;
   setDemoGuideOpen: (open: boolean) => void;
   setDemoGuideStep: (step: number) => void;
@@ -51,26 +59,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentRole, setCurrentRole] = useState<UserRole>('patient');
   const [currentPatient, setCurrentPatient] = useState<PatientUser | null>(MOCK_PATIENTS[0]); // Riya Das
   const [currentDoctor, setCurrentDoctor] = useState<DoctorUser | null>(MOCK_DOCTORS[0]); // Dr. Ananya Sharma
+  const [currentFacility, setCurrentFacility] = useState<string>('CAREQ Demo Primary Health Centre, Jatni');
+  const [facilityId, setFacilityId] = useState<string>('FAC-DEMO-OD-001');
   const [currentRoute, setCurrentRoute] = useState<string>('/patient/dashboard');
+  
   const [assessments, setAssessments] = useState<Assessment[]>(() => {
-    const saved = localStorage.getItem('swasthyasetu_assessments');
+    const saved = localStorage.getItem('careq_assessments');
     return saved ? JSON.parse(saved) : INITIAL_ASSESSMENTS;
   });
+
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>('ASM-2026-00124');
+  
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>(() => {
-    const saved = localStorage.getItem('swasthyasetu_audit_logs');
+    const saved = localStorage.getItem('careq_audit_logs');
     return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
   });
+
   const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [isDemoGuideOpen, setDemoGuideOpen] = useState(false);
   const [demoGuideStep, setDemoGuideStep] = useState(1);
 
   useEffect(() => {
-    localStorage.setItem('swasthyasetu_assessments', JSON.stringify(assessments));
+    localStorage.setItem('careq_assessments', JSON.stringify(assessments));
   }, [assessments]);
 
   useEffect(() => {
-    localStorage.setItem('swasthyasetu_audit_logs', JSON.stringify(auditLogs));
+    localStorage.setItem('careq_audit_logs', JSON.stringify(auditLogs));
   }, [auditLogs]);
 
   const navigate = (route: string) => {
@@ -89,6 +103,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const switchFacility = (facilityName: string, id: string) => {
+    setCurrentFacility(facilityName);
+    setFacilityId(id);
+    addAuditEvent(
+      'Facility Context Switched',
+      currentDoctor?.name || 'Dr. Ananya Sharma',
+      'Healthcare Worker',
+      `Practitioner switched active facility context to: ${facilityName} (${id})`
+    );
+  };
+
   const loginAsPatient = (patientId = 'PAT-2026-00124') => {
     const found = MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0];
     setCurrentPatient(found);
@@ -102,7 +127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentDoctor(found);
     setCurrentRole('doctor');
     navigate('/doctor/dashboard');
-    addAuditEvent('Healthcare worker authenticated', found.name, 'Healthcare Worker', `Verified session initialized. Registration: ${found.medicalRegistrationId}`);
+    addAuditEvent('Healthcare professional authenticated', found.name, 'Healthcare Worker', `Verified session initialized. Registration: ${found.medicalRegistrationId}`);
   };
 
   const logout = () => {
@@ -138,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'New Assessment Submitted',
       newAssessment.patientName,
       'Patient',
-      `Multimodal triage note prepared. Risk priority calculated: ${newAssessment.riskLevel}`,
+      `Triage assessment submitted with informed consent. Urgency Signal: ${newAssessment.riskLevel}`,
       newAssessment.id
     );
   };
@@ -157,15 +182,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clinicalNotes
     });
     addAuditEvent(
-      'Case marked reviewed',
+      'Completed review',
       reviewerName,
       'Healthcare Worker',
-      `Clinical review completed. Clinical note documented: "${clinicalNotes.substring(0, 45)}..."`,
+      `Clinical review completed. Note: "${clinicalNotes.substring(0, 48)}..."`,
       assessmentId
     );
   };
 
-  const requestFollowUp = (assessmentId: string, question: string, rationale: string) => {
+  const requestFollowUp = (
+    assessmentId: string, 
+    question: string, 
+    rationale: string,
+    responseType: 'text' | 'voice' | 'choice' = 'text'
+  ) => {
     const reviewerName = currentDoctor?.name || 'Dr. Ananya Sharma';
     setAssessments(prev => prev.map(a => {
       if (a.id === assessmentId) {
@@ -174,7 +204,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           question,
           rationale,
           status: 'ASKED' as const,
-          sourceSignal: 'Clinical review follow-up'
+          responseType,
+          sourceSignal: 'Clinical review inquiry'
         };
         return {
           ...a,
@@ -185,10 +216,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return a;
     }));
     addAuditEvent(
-      'Follow-up question requested',
+      'Requested information',
       reviewerName,
       'Healthcare Worker',
-      `Sent clinical inquiry to patient: "${question}"`,
+      `Sent inquiry to patient: "${question}" (Expected: ${responseType})`,
       assessmentId
     );
   };
@@ -206,8 +237,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return a;
     }));
     addAuditEvent(
-      'Patient response received',
-      'Patient Portal Subsystem',
+      'Submitted response',
+      currentPatient?.name || 'Patient',
       'Patient',
       `Answer recorded: "${answer}"`,
       assessmentId
@@ -221,12 +252,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       referralNote: referral
     });
     addAuditEvent(
-      'Referral Note Prepared',
+      'Approved Referral',
       reviewerName,
       'Healthcare Worker',
-      `Structured referral generated for target facility: ${referral.targetFacility} (${referral.priority})`,
+      `Structured referral approved for transfer to: ${referral.targetFacility} (${referral.priority})`,
       referral.assessmentId
     );
+  };
+
+  const updatePatientConsent = (categories: ConsentCategories) => {
+    if (currentPatient) {
+      const updated = {
+        ...currentPatient,
+        consentCategories: categories
+      };
+      setCurrentPatient(updated);
+      addAuditEvent(
+        'Consent Preferences Updated',
+        currentPatient.name,
+        'Patient',
+        `Data sharing permissions updated in personal consent ledger.`
+      );
+    }
   };
 
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId) || assessments[0] || null;
@@ -237,6 +284,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentRole,
         currentPatient,
         currentDoctor,
+        currentFacility,
+        facilityId,
+        availableFacilities: CAREQ_FACILITIES,
         currentRoute,
         assessments,
         selectedAssessment,
@@ -247,6 +297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         demoGuideStep,
         navigate,
         switchRole,
+        switchFacility,
         setCurrentRoute,
         setSelectedAssessmentId,
         loginAsPatient,
@@ -259,6 +310,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         requestFollowUp,
         markQuestionAnswered,
         saveReferralNote,
+        updatePatientConsent,
         setPrivacyModalOpen,
         setDemoGuideOpen,
         setDemoGuideStep,

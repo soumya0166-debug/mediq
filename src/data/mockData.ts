@@ -1,4 +1,4 @@
-import { PatientUser, DoctorUser, Assessment, AuditEvent } from '../types';
+import { PatientUser, DoctorUser, Assessment, AuditEvent, Facility } from '../types';
 
 export const MOCK_PATIENTS: PatientUser[] = [
   {
@@ -8,13 +8,21 @@ export const MOCK_PATIENTS: PatientUser[] = [
     age: 34,
     gender: 'Female',
     phone: '+91 98765 43210',
-    email: 'riya.das.demo@swasthyasetu.org',
+    email: 'riya.das.demo@careq-health.org',
     preferredLanguage: 'Odia',
     demoAadhaarLast4: '1234',
     isVerified: true,
     consentGiven: true,
+    consentCategories: {
+      symptoms: true,
+      reports: true,
+      voiceTranscript: true,
+      translation: true,
+      previousAssessments: false,
+    },
     address: 'Khandagiri, Bhubaneswar, Khordha, Odisha - 751030',
-    emergencyContact: 'Debashis Das (Spouse) - +91 98765 11223'
+    emergencyContact: 'Debashis Das (Spouse) - +91 98765 11223',
+    assignedFacility: 'CAREQ Demo Primary Health Centre (FAC-DEMO-OD-001)'
   },
   {
     id: 'PAT-2026-00125',
@@ -23,13 +31,21 @@ export const MOCK_PATIENTS: PatientUser[] = [
     age: 45,
     gender: 'Male',
     phone: '+91 94371 88921',
-    email: 'amit.kumar.demo@swasthyasetu.org',
+    email: 'amit.kumar.demo@careq-health.org',
     preferredLanguage: 'Hindi',
     demoAadhaarLast4: '8842',
     isVerified: true,
     consentGiven: true,
+    consentCategories: {
+      symptoms: true,
+      reports: true,
+      voiceTranscript: true,
+      translation: true,
+      previousAssessments: true,
+    },
     address: 'Patia, Bhubaneswar, Odisha',
-    emergencyContact: 'Sunita Kumar (Wife) - +91 94371 44556'
+    emergencyContact: 'Sunita Kumar (Wife) - +91 94371 44556',
+    assignedFacility: 'CAREQ Demo Primary Health Centre (FAC-DEMO-OD-001)'
   },
   {
     id: 'PAT-2026-00126',
@@ -38,13 +54,21 @@ export const MOCK_PATIENTS: PatientUser[] = [
     age: 58,
     gender: 'Female',
     phone: '+91 91234 56789',
-    email: 'sunita.devi.demo@swasthyasetu.org',
+    email: 'sunita.devi.demo@careq-health.org',
     preferredLanguage: 'Bengali',
     demoAadhaarLast4: '4491',
     isVerified: true,
     consentGiven: true,
+    consentCategories: {
+      symptoms: true,
+      reports: true,
+      voiceTranscript: true,
+      translation: true,
+      previousAssessments: false,
+    },
     address: 'Cuttack Sadar, Odisha',
-    emergencyContact: 'Rajesh Devi (Son) - +91 91234 99887'
+    emergencyContact: 'Rajesh Devi (Son) - +91 91234 99887',
+    assignedFacility: 'CAREQ Demo Community Health Centre (FAC-DEMO-OD-002)'
   },
   {
     id: 'PAT-2026-00127',
@@ -53,7 +77,7 @@ export const MOCK_PATIENTS: PatientUser[] = [
     age: 28,
     gender: 'Male',
     phone: '+91 82490 12345',
-    email: 'rahul.p.demo@swasthyasetu.org',
+    email: 'rahul.p.demo@careq-health.org',
     preferredLanguage: 'Odia',
     demoAadhaarLast4: '6731',
     isVerified: true,
@@ -67,7 +91,7 @@ export const MOCK_PATIENTS: PatientUser[] = [
     age: 22,
     gender: 'Female',
     phone: '+91 97760 98765',
-    email: 'priya.singh.demo@swasthyasetu.org',
+    email: 'priya.singh.demo@careq-health.org',
     preferredLanguage: 'English',
     demoAadhaarLast4: '5219',
     isVerified: true,
@@ -80,26 +104,28 @@ export const MOCK_DOCTORS: DoctorUser[] = [
   {
     id: 'DOC-NMC-84920',
     name: 'Dr. Ananya Sharma',
-    role: 'Doctor',
-    facility: 'Capital Hospital & Community Health Centre, Unit-6',
+    role: 'Medical Officer',
+    facility: 'CAREQ Demo Primary Health Centre, Jatni',
+    facilityId: 'FAC-DEMO-OD-001',
     state: 'Odisha',
     medicalRegistrationId: 'NMC/ORI/2015/084920',
     experienceYears: 11,
     phone: '+91 94370 12399',
-    email: 'dr.ananya.sharma@health.odisha.gov.in',
+    email: 'dr.ananya.sharma@careq-health.gov.in',
     isVerified: true,
-    specialization: 'General Medicine & Public Health'
+    specialization: 'General Medicine & Triage Care'
   },
   {
     id: 'DOC-NMC-71204',
     name: 'Dr. Arjun Mehta',
-    role: 'Medical Officer',
-    facility: 'SCB Medical College & Hospital, Cuttack',
+    role: 'Doctor',
+    facility: 'CAREQ Demo Community Health Centre, Khordha',
+    facilityId: 'FAC-DEMO-OD-002',
     state: 'Odisha',
     medicalRegistrationId: 'NMC/ORI/2018/071204',
     experienceYears: 8,
     phone: '+91 94372 99881',
-    email: 'dr.arjun.mehta@scbmc.ac.in',
+    email: 'dr.arjun.mehta@careq-health.gov.in',
     isVerified: true,
     specialization: 'Emergency & Critical Care'
   },
@@ -107,14 +133,15 @@ export const MOCK_DOCTORS: DoctorUser[] = [
     id: 'NUR-INC-39210',
     name: 'Nurse Kavita Das',
     role: 'Nurse',
-    facility: 'Primary Health Centre (PHC), Jatni',
+    facility: 'CAREQ Demo Primary Health Centre, Jatni',
+    facilityId: 'FAC-DEMO-OD-001',
     state: 'Odisha',
     medicalRegistrationId: 'INC/ONC/2020/039210',
     experienceYears: 6,
     phone: '+91 93380 55443',
-    email: 'kavita.das@health.odisha.gov.in',
+    email: 'kavita.das@careq-health.gov.in',
     isVerified: true,
-    specialization: 'Triage & Community Nursing'
+    specialization: 'Triage & Patient Ingestion'
   }
 ];
 
@@ -139,27 +166,37 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
     queuePosition: 1,
     riskLevel: 'HIGH',
     status: 'WAITING_REVIEW',
+    facilityId: 'FAC-DEMO-OD-001',
     structuredSymptoms: ['High fever for 2 days', 'Persistent dry cough', 'Reported breathing discomfort / chest tightness', 'Severe fatigue & myalgia'],
     reportedDuration: '2 days (acute worsening today)',
     reportedConcerns: ['Breathing difficulty while lying down', 'Unable to keep food down due to severe malaise'],
     timeline: [
       {
         day: 'Day 1 (48h ago)',
+        date: '22 Sep 2026',
         title: 'Onset of Fever & Chills',
         description: 'Patient felt sudden evening chills followed by fever (approx 101°F). Took oral paracetamol.',
-        source: 'patient_voice'
+        source: 'patient_voice',
+        actor: 'Patient',
+        status: 'Recorded'
       },
       {
         day: 'Day 2 (24h ago)',
-        title: 'Cough Aggravation',
-        description: 'Dry cough intensified, paracetamol gave only brief temperature relief. CBC report done at local clinic.',
-        source: 'patient_text'
+        date: '23 Sep 2026',
+        title: 'Cough Aggravation & Lab Test',
+        description: 'Dry cough intensified, paracetamol gave only brief relief. CBC report taken at local diagnostic lab.',
+        source: 'patient_text',
+        actor: 'Patient',
+        status: 'Report Attached'
       },
       {
         day: 'Day 3 (Today morning)',
+        date: '24 Sep 2026',
         title: 'Dyspnea & Chest Tightness',
         description: 'Noticeable difficulty catching breath, heavy chest sensation upon slight exertion.',
-        source: 'patient_voice'
+        source: 'patient_voice',
+        actor: 'Patient',
+        status: 'Active Symptom'
       }
     ],
     missingInformation: [
@@ -195,7 +232,8 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         signal: 'Reported breathing difficulty / dyspnea',
         source: 'voice',
         confidence: 0.94,
-        note: 'Acoustic voice analysis detected shallow breathing cadence and vocal strain.'
+        note: 'Acoustic voice analysis detected shallow breathing cadence and vocal strain.',
+        rawExcerpt: 'ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି (Chest tightness and breathing difficulty since this morning)'
       },
       {
         id: 'us-2',
@@ -203,7 +241,8 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         signal: 'CBC report: Elevated WBC (14,200 /µL) with Neutrophilia (82%)',
         source: 'report',
         confidence: 0.98,
-        note: 'Leukocytosis detected in uploaded automated hematology counter report.'
+        note: 'Leukocytosis detected in uploaded automated hematology counter report.',
+        rawExcerpt: 'Total Leukocyte Count (WBC): 14,200 [High] | Reference: 4,000 - 11,000 /µL'
       },
       {
         id: 'us-3',
@@ -211,7 +250,8 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         signal: 'Persistent acute fever (>48 hours)',
         source: 'text',
         confidence: 0.96,
-        note: 'Reported unresponsiveness to routine domestic antipyretics.'
+        note: 'Reported unresponsiveness to routine domestic antipyretics.',
+        rawExcerpt: 'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର (Severe fever for 2 days)'
       },
       {
         id: 'us-4',
@@ -219,7 +259,34 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         signal: 'No crushing cardiac-type chest pain reported',
         source: 'text',
         confidence: 0.91,
-        note: 'Discomfort reported as respiratory tightness rather than retrosternal radiating pain.'
+        note: 'Discomfort reported as respiratory tightness rather than retrosternal radiating pain.',
+        rawExcerpt: 'Pain characterized as respiratory stiffness rather than retrosternal pressure'
+      }
+    ],
+    sourceTraceability: [
+      {
+        id: 'st-1',
+        statement: 'Severe fever and cough for 2 days',
+        sourceType: 'voice',
+        sourceLabel: 'Voice Input (Odia audio track: 00:02 - 00:06)',
+        sourceExcerpt: 'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି (I have had severe fever and cough for 2 days)',
+        confidenceScore: 0.96
+      },
+      {
+        id: 'st-2',
+        statement: 'Difficulty taking deep breaths and chest tightness',
+        sourceType: 'voice',
+        sourceLabel: 'Voice Input (Odia audio track: 00:07 - 00:12)',
+        sourceExcerpt: 'ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି (Chest heavy and breathing trouble)',
+        confidenceScore: 0.94
+      },
+      {
+        id: 'st-3',
+        statement: 'WBC Count 14,200 /µL (High) & Neutrophils 82%',
+        sourceType: 'report',
+        sourceLabel: 'CBC Report (blood_report.pdf - OCR Page 1)',
+        sourceExcerpt: 'Total Leukocyte Count (WBC): 14,200 /µL [Ref: 4,000-11,000] | Neutrophils: 82% [Ref: 40-70]',
+        confidenceScore: 0.98
       }
     ],
     followUpQuestions: [
@@ -228,6 +295,7 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         question: 'Are you currently experiencing difficulty breathing while resting, or only when walking?',
         rationale: 'Clarifies whether dyspnea is at rest (urgent) vs exertional.',
         status: 'PENDING',
+        responseType: 'choice',
         sourceSignal: 'Reported breathing discomfort'
       },
       {
@@ -235,6 +303,7 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         question: 'Do you have access to a fingertip pulse oximeter? If yes, what is your oxygen reading (SpO2)?',
         rationale: 'Rule out hypoxemia needing emergency supplemental oxygen.',
         status: 'PENDING',
+        responseType: 'text',
         sourceSignal: 'Missing SpO2'
       },
       {
@@ -242,6 +311,7 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         question: 'What was your highest recorded temperature with a thermometer today?',
         rationale: 'Determines objective grade of fever.',
         status: 'PENDING',
+        responseType: 'text',
         sourceSignal: 'Persistent fever'
       },
       {
@@ -249,6 +319,7 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         question: 'Do you have any known medical conditions like asthma, diabetes, or hypertension?',
         rationale: 'Screens for clinical co-morbidities elevating triage urgency.',
         status: 'PENDING',
+        responseType: 'choice',
         sourceSignal: 'Missing medical history'
       }
     ],
@@ -258,7 +329,7 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         reportName: 'Complete Blood Count (CBC) with Differential',
         reportDate: '2026-09-23',
         category: 'Hematology',
-        fileName: 'riya_das_cbc_report.pdf',
+        fileName: 'blood_report.pdf',
         fileSize: '412 KB',
         ocrConfidence: 0.97,
         tests: [
@@ -291,21 +362,26 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
     queuePosition: 2,
     riskLevel: 'HIGH',
     status: 'WAITING_REVIEW',
+    facilityId: 'FAC-DEMO-OD-001',
     structuredSymptoms: ['Acute right lower quadrant abdominal pain (6h)', 'Associated nausea & anorexia', 'Low grade fever', 'Peritoneal aggravation with coughing'],
     reportedDuration: '6 hours (rapid acute onset)',
     reportedConcerns: ['Unable to straighten up or walk upright', 'Pain progressively worsening'],
     timeline: [
       {
         day: '6 hours ago',
+        date: '24 Sep 2026',
         title: 'Periumbilical discomfort began',
         description: 'Vague crampy pain around naval.',
-        source: 'patient_voice'
+        source: 'patient_voice',
+        actor: 'Patient'
       },
       {
         day: '3 hours ago',
+        date: '24 Sep 2026',
         title: 'Pain localized to Right Lower Quadrant',
         description: 'Shifted to right iliac fossa with sharp constant pain and nausea.',
-        source: 'patient_voice'
+        source: 'patient_voice',
+        actor: 'Patient'
       }
     ],
     missingInformation: [
@@ -322,18 +398,30 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         note: 'Symptom cluster characteristic of acute abdominal pathology.'
       }
     ],
+    sourceTraceability: [
+      {
+        id: 'st-10',
+        statement: 'Severe right lower quadrant pain for 6 hours',
+        sourceType: 'voice',
+        sourceLabel: 'Voice Input (Hindi track: 00:00 - 00:07)',
+        sourceExcerpt: 'पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है',
+        confidenceScore: 0.95
+      }
+    ],
     followUpQuestions: [
       {
         id: 'fq-10',
         question: 'Have you had any episodes of vomiting or diarrhea since the pain started?',
         rationale: 'Assesses GI complications and hydration status.',
-        status: 'PENDING'
+        status: 'PENDING',
+        responseType: 'choice'
       },
       {
         id: 'fq-11',
         question: 'When did you last eat or drink anything?',
         rationale: 'Pre-procedural fasting assessment.',
-        status: 'PENDING'
+        status: 'PENDING',
+        responseType: 'text'
       }
     ],
     extractedReports: []
@@ -356,15 +444,18 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
     queuePosition: 3,
     riskLevel: 'LOW',
     status: 'WAITING_REVIEW',
+    facilityId: 'FAC-DEMO-OD-002',
     structuredSymptoms: ['Bilateral knee joint pain & morning stiffness', 'Duration 3 weeks', 'No acute swelling or red erythema'],
     reportedDuration: '3 weeks (chronic / subacute)',
     reportedConcerns: ['Difficulty using traditional stairs', 'Stiffness eases after 20 minutes of mild movement'],
     timeline: [
       {
         day: '3 weeks ago',
+        date: '03 Sep 2026',
         title: 'Mild joint stiffness onset',
         description: 'Gradual onset after household chores.',
-        source: 'patient_text'
+        source: 'patient_text',
+        actor: 'Patient'
       }
     ],
     missingInformation: [
@@ -385,7 +476,8 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         id: 'fq-20',
         question: 'Is there any swelling, warmth, or redness around either knee joint?',
         rationale: 'Differentiates septic / active inflammatory effusion.',
-        status: 'PENDING'
+        status: 'PENDING',
+        responseType: 'choice'
       }
     ],
     extractedReports: [
@@ -425,21 +517,26 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
     queuePosition: 4,
     riskLevel: 'MEDIUM',
     status: 'IN_REVIEW',
+    facilityId: 'FAC-DEMO-OD-001',
     structuredSymptoms: ['Erythematous maculopapular pruritic rash', 'Mild low-grade fever', 'Potential new substance / allergen exposure'],
     reportedDuration: '2 days',
     reportedConcerns: ['Spreading itching sensation', 'Concerned regarding drug reaction'],
     timeline: [
       {
         day: '3 days ago',
+        date: '21 Sep 2026',
         title: 'Herb / supplement ingestion',
         description: 'Started self-prescribed decoction.',
-        source: 'patient_text'
+        source: 'patient_text',
+        actor: 'Patient'
       },
       {
         day: '2 days ago',
+        date: '22 Sep 2026',
         title: 'Forearm rash',
         description: 'Itchy bumps appeared on bilateral forearms.',
-        source: 'patient_text'
+        source: 'patient_text',
+        actor: 'Patient'
       }
     ],
     missingInformation: [
@@ -461,7 +558,8 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
         id: 'fq-30',
         question: 'Do you feel any swelling of your lips, tongue, or difficulty swallowing?',
         rationale: 'Screening for angioedema / anaphylaxis.',
-        status: 'PENDING'
+        status: 'PENDING',
+        responseType: 'choice'
       }
     ],
     extractedReports: []
@@ -484,6 +582,7 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
     queuePosition: 5,
     riskLevel: 'LOW',
     status: 'REVIEWED',
+    facilityId: 'FAC-DEMO-OD-001',
     reviewedBy: 'Dr. Ananya Sharma',
     reviewedAt: 'Today, 10:10 AM',
     clinicalNotes: 'Mild upper respiratory catarrhal symptoms without lower respiratory distress. Advised hydration, warm saline gargles, and routine tele-OPD follow-up if symptoms persist past day 5.',
@@ -493,9 +592,11 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
     timeline: [
       {
         day: '3 days ago',
+        date: '21 Sep 2026',
         title: 'Throat irritation',
         description: 'Dry scratchy sensation in pharynx.',
-        source: 'patient_voice'
+        source: 'patient_voice',
+        actor: 'Patient'
       }
     ],
     missingInformation: [],
@@ -517,97 +618,97 @@ export const INITIAL_ASSESSMENTS: Assessment[] = [
 export const INITIAL_AUDIT_LOGS: AuditEvent[] = [
   {
     id: 'AUD-001',
-    timestamp: '10:42 AM',
+    timestamp: '14:32',
     actor: 'Riya Das (Patient)',
     actorRole: 'Patient',
-    action: 'Submitted multimodal symptoms',
+    action: 'Submitted symptoms',
     details: 'Voice recording (14s) + Text description in Odia submitted with consent',
     ipHash: 'sha256-e91b...a47f',
     caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-002',
-    timestamp: '10:43 AM',
-    actor: 'Multimodal Audio Subsystem',
+    timestamp: '14:33',
+    actor: 'CAREQ Subsystem',
     actorRole: 'System Triage',
-    action: 'Voice converted to text & translated',
-    details: 'Transcribed Odia audio stream with 96.2% acoustic confidence; generated English translation for clinical team',
+    action: 'Processed voice input',
+    details: 'Converted Odia voice to text & generated English translation for clinical team',
     ipHash: 'internal-pipeline-01',
     caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-003',
-    timestamp: '10:43 AM',
-    actor: 'Medical Document Engine',
+    timestamp: '14:33',
+    actor: 'CAREQ OCR Engine',
     actorRole: 'System OCR',
     action: 'Report OCR completed',
-    details: 'Processed riya_das_cbc_report.pdf (6 test parameters parsed, 3 out-of-range flags detected)',
+    details: 'Processed blood_report.pdf (6 test parameters parsed, 3 out-of-range flags detected)',
     ipHash: 'internal-ocr-03',
     caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-004',
-    timestamp: '10:44 AM',
-    actor: 'Clinical Triage Synthesizer',
+    timestamp: '14:34',
+    actor: 'CAREQ Triage Synthesizer',
     actorRole: 'System Triage',
-    action: 'Structured triage note generated',
-    details: 'Synthesized timeline, identified 4 missing critical data points, highlighted 2 high-priority urgency signals',
+    action: 'Triage note generated',
+    details: 'Synthesized timeline, identified 4 missing data points, highlighted urgency signals',
     ipHash: 'internal-triage-ai',
     caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-005',
-    timestamp: '10:45 AM',
+    timestamp: '14:35',
     actor: 'Dr. Ananya Sharma',
     actorRole: 'Healthcare Worker',
-    action: 'Healthcare worker opened case',
-    details: 'Dr. Ananya Sharma accessed patient review workspace (Verification ID: NMC/ORI/2015/084920)',
+    action: 'Opened case',
+    details: 'Dr. Ananya Sharma opened case workspace at CAREQ Demo PHC (NMC/ORI/2015/084920)',
     ipHash: '10.24.180.12',
     caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-006',
-    timestamp: '10:47 AM',
+    timestamp: '14:37',
     actor: 'Dr. Ananya Sharma',
     actorRole: 'Healthcare Worker',
-    action: 'Follow-up question requested',
-    details: 'Sent verified notification to patient: "Do you have access to a fingertip pulse oximeter?"',
+    action: 'Requested information',
+    details: 'Sent inquiry to patient: "Do you have access to a fingertip pulse oximeter?"',
     ipHash: '10.24.180.12',
     caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-007',
-    timestamp: '10:10 AM',
-    actor: 'Dr. Ananya Sharma',
-    actorRole: 'Healthcare Worker',
-    action: 'Case marked reviewed',
-    details: 'Completed clinical review for Priya Singh (ASM-2026-00128). Status updated to REVIEWED.',
-    ipHash: '10.24.180.12',
-    caseId: 'ASM-2026-00128'
+    timestamp: '14:40',
+    actor: 'Riya Das (Patient)',
+    actorRole: 'Patient',
+    action: 'Submitted response',
+    details: 'Patient answered: "Yes, currently reads 97% on oximeter"',
+    ipHash: 'sha256-e91b...a47f',
+    caseId: 'ASM-2026-00124'
   },
   {
     id: 'AUD-008',
-    timestamp: '09:48 AM',
-    actor: 'Priya Singh (Patient)',
-    actorRole: 'Patient',
-    action: 'Patient registered with demo Aadhaar',
-    details: 'Simulated OTP verification for demo Aadhaar ending 5219; consent recorded in state ledger',
-    ipHash: 'sha256-77ca...12fa',
-    caseId: 'PAT-2026-00128'
+    timestamp: '14:42',
+    actor: 'Dr. Ananya Sharma',
+    actorRole: 'Healthcare Worker',
+    action: 'Completed review',
+    details: 'Clinical review completed. Clinical note documented and status updated to REVIEWED.',
+    ipHash: '10.24.180.12',
+    caseId: 'ASM-2026-00128'
   }
 ];
 
 export const SAMPLE_REPORTS_LIBRARY = [
   {
     id: 'SAMPLE-CBC',
-    title: 'Complete Blood Count (CBC) with Platelets',
-    hospital: 'Capital Hospital Laboratory Services, Bhubaneswar',
+    title: 'Complete Blood Count (CBC) with Differential',
+    hospital: 'CAREQ Demo Primary Health Centre Diagnostic Lab, Jatni',
     sampleType: 'Whole Blood EDTA',
     date: '2026-09-24',
     badge: 'Hematology',
     summary: 'Elevated WBC count (14,200 /µL) with elevated Neutrophils (82%). Hemoglobin: 12.4 g/dL, Platelets: 215,000 /µL.',
-    rawOcrText: `CAPITAL HOSPITAL BHUBANESWAR - CENTRAL PATHOLOGY LAB
-PATIENT: RIYA DAS | AGE: 34 / F | REF BY: DR. CLINICAL TRIAGE
+    rawOcrText: `CAREQ DEMO PHC JATNI - CENTRAL PATHOLOGY LAB
+PATIENT: RIYA DAS | AGE: 34 / F | REF BY: DR. ANANYA SHARMA
 SAMPLE: WHOLE BLOOD EDTA | COLLECTION: 24/09/2026 08:15 AM
 TEST NAME                    RESULT       UNIT       REF RANGE
 Total Leukocyte Count (WBC)  14,200 [H]   /µL        4,000 - 11,000
@@ -631,12 +732,12 @@ ESR (Westergren 1 hr)        38 [H]       mm/hr      0 - 20
   {
     id: 'SAMPLE-CHEST-XRAY',
     title: 'Chest Radiograph (PA View) Report',
-    hospital: 'All India Institute of Medical Sciences (AIIMS) Bhubaneswar',
+    hospital: 'CAREQ Demo District Hospital, Cuttack',
     sampleType: 'Digital Radiography',
     date: '2026-09-23',
     badge: 'Radiology',
     summary: 'Subtle patchy opacities in right lower zone. Costophrenic angles clear. Cardiothoracic ratio within normal physiological limits.',
-    rawOcrText: `DEPARTMENT OF RADIODIAGNOSIS - AIIMS BHUBANESWAR
+    rawOcrText: `DEPARTMENT OF RADIODIAGNOSIS - CAREQ DEMO DISTRICT HOSPITAL
 EXAMINATION: CHEST X-RAY PA VIEW
 FINDINGS:
 - Bronchovascular markings mildly prominent in bilateral perihilar regions.
@@ -655,12 +756,12 @@ IMPRESSION: Mild right lower zone parenchymal infiltrate. Correlate clinically w
   {
     id: 'SAMPLE-METABOLIC',
     title: 'Random Blood Glucose & Renal Function Panel',
-    hospital: 'District Headquarters Hospital (DHH) Khordha',
+    hospital: 'CAREQ Demo Community Health Centre, Khordha',
     sampleType: 'Serum / Fluoride Plasma',
     date: '2026-09-22',
     badge: 'Biochemistry',
     summary: 'Blood Sugar Random: 142 mg/dL. Serum Creatinine: 0.9 mg/dL. Blood Urea: 24 mg/dL. Electrolytes within normal limits.',
-    rawOcrText: `DHH KHORDHA - CLINICAL BIOCHEMISTRY
+    rawOcrText: `CAREQ DEMO CHC KHORDHA - CLINICAL BIOCHEMISTRY
 TEST NAME               RESULT     UNIT     REFERENCE RANGE
 Blood Glucose (Random)  142 [H]    mg/dL    70 - 140
 Serum Creatinine        0.9        mg/dL    0.6 - 1.2
@@ -673,5 +774,29 @@ Serum Potassium (K+)    4.2        mEq/L    3.5 - 5.0
       { testName: 'Serum Creatinine', result: '0.9', unit: 'mg/dL', referenceRange: '0.6 - 1.2', isAbnormal: false },
       { testName: 'Blood Urea', result: '24', unit: 'mg/dL', referenceRange: '15 - 40', isAbnormal: false }
     ]
+  }
+];
+
+export const CAREQ_FACILITIES: Facility[] = [
+  {
+    id: 'FAC-DEMO-OD-001',
+    name: 'CAREQ Demo Primary Health Centre, Jatni',
+    type: 'Primary Health Centre',
+    district: 'Khordha',
+    state: 'Odisha'
+  },
+  {
+    id: 'FAC-DEMO-OD-002',
+    name: 'CAREQ Demo Community Health Centre, Khordha',
+    type: 'Community Health Centre',
+    district: 'Khordha',
+    state: 'Odisha'
+  },
+  {
+    id: 'FAC-DEMO-OD-003',
+    name: 'CAREQ Demo District Hospital, Cuttack',
+    type: 'District Hospital',
+    district: 'Cuttack',
+    state: 'Odisha'
   }
 ];
