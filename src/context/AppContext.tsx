@@ -14,7 +14,12 @@ import {
   AppPermission,
   AuditEventType,
   PATIENT_PERMISSIONS,
-  PROFESSIONAL_PERMISSIONS
+  PROFESSIONAL_PERMISSIONS,
+  EmailOtpSendResponse,
+  EmailOtpVerifyResponse,
+  MobileOtpSendResponse,
+  MobileOtpVerifyResponse,
+  ProviderConfigStatus
 } from '../types';
 import { 
   MOCK_PATIENTS, 
@@ -103,6 +108,10 @@ interface AppContextType {
   setPrivacyModalOpen: (open: boolean) => void;
   setDemoGuideOpen: (open: boolean) => void;
   setDemoGuideStep: (step: number) => void;
+  sendEmailOtp: (email: string, purpose?: 'login' | 'signup', role?: UserRole) => Promise<EmailOtpSendResponse>;
+  verifyEmailOtp: (email: string, otp: string, purpose?: 'login' | 'signup') => Promise<EmailOtpVerifyResponse>;
+  sendMobileOtpForWorkspaceSwitch: (targetRole: UserRole, clinicalJustification?: string) => Promise<MobileOtpSendResponse>;
+  verifyMobileOtpForWorkspaceSwitch: (otp: string, targetRole: UserRole, clinicalJustification?: string) => Promise<MobileOtpVerifyResponse>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -605,6 +614,235 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // 1. Email OTP Send
+  const sendEmailOtp = async (email: string, purpose: 'login' | 'signup' = 'login', role: UserRole = 'PATIENT'): Promise<EmailOtpSendResponse> => {
+    try {
+      const res = await fetch('/api/auth/email/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, purpose, role })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addAuditEvent(
+          'Email Verification Code Dispatched',
+          email,
+          role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+          `Transactional email OTP generated and sent to ${data.maskedEmail || email} for ${purpose}.`,
+          undefined,
+          'EMAIL_OTP_SENT'
+        );
+        return data;
+      }
+      return {
+        success: false,
+        message: data.error || 'Failed to dispatch email verification code.',
+        missingConfig: data.missingConfig
+      };
+    } catch {
+      return { success: false, message: 'Network error connecting to email authentication gateway.' };
+    }
+  };
+
+  // 2. Email OTP Verify
+  const verifyEmailOtp = async (email: string, otp: string, purpose: 'login' | 'signup' = 'login'): Promise<EmailOtpVerifyResponse> => {
+    try {
+      const res = await fetch('/api/auth/email/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, purpose })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addAuditEvent(
+          'Email OTP Verified',
+          email,
+          data.role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+          `Email address verified successfully. Authenticated session token issued: ${data.sessionToken?.slice(0, 14)}...`,
+          undefined,
+          'EMAIL_OTP_VERIFIED'
+        );
+
+        if (purpose === 'login') {
+          if (data.role === 'HEALTHCARE_PROFESSIONAL') {
+            loginAsDoctor('DOC-1');
+          } else {
+            loginAsPatient('PAT-1');
+          }
+        }
+
+        return data;
+      }
+
+      addAuditEvent(
+        'Email OTP Verification Failed',
+        email,
+        'Patient',
+        `Verification attempt rejected: ${data.error || 'Invalid OTP'}. Remaining attempts: ${data.attemptsRemaining ?? 'unknown'}`,
+        undefined,
+        'EMAIL_OTP_FAILED'
+      );
+      return {
+        success: false,
+        message: data.error || 'The verification code is incorrect. Please try again.',
+        attemptsRemaining: data.attemptsRemaining
+      };
+    } catch {
+      return { success: false, message: 'Network error verifying email code.' };
+    }
+  };
+
+  // 3. Mobile OTP Send for Workspace Switch
+  const sendMobileOtpForWorkspaceSwitch = async (targetRole: UserRole, clinicalJustification?: string): Promise<MobileOtpSendResponse> => {
+    const activeSessionId = currentSession?.sessionId || 'SES-CURRENT';
+    const mobileNumber = currentRole === 'PATIENT' ? (currentPatient?.phone || '+91 98765 43210') : '+91 98765 43210';
+
+    addAuditEvent(
+      'Workspace Change Requested',
+      currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
+      currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+      `Deliberate workspace transition requested from ${currentRole} to ${targetRole}. Mobile OTP security challenge initiated.`,
+      undefined,
+      'WORKSPACE_CHANGE_REQUESTED'
+    );
+
+    try {
+      const res = await fetch('/api/auth/mobile/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          currentRole,
+          targetRole,
+          mobileNumber,
+          clinicalJustification
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addAuditEvent(
+          'Mobile OTP Dispatched',
+          currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
+          currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+          `SMS OTP dispatched to registered mobile number ${data.maskedMobile || mobileNumber} for workspace transition.`,
+          undefined,
+          'MOBILE_OTP_SENT'
+        );
+        return data;
+      }
+      return {
+        success: false,
+        message: data.error || 'Failed to dispatch mobile verification code.',
+        missingConfig: data.missingConfig
+      };
+    } catch {
+      return { success: false, message: 'Network error connecting to mobile SMS gateway.' };
+    }
+  };
+
+  // 4. Mobile OTP Verify & Workspace Transition
+  const verifyMobileOtpForWorkspaceSwitch = async (otp: string, targetRole: UserRole, clinicalJustification?: string): Promise<MobileOtpVerifyResponse> => {
+    const activeSessionId = currentSession?.sessionId || 'SES-CURRENT';
+    try {
+      const res = await fetch('/api/auth/mobile/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          otp,
+          targetRole
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // Audit OTP verification
+        addAuditEvent(
+          'Mobile OTP Verified',
+          targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Doctor') : (currentPatient?.name || 'Patient'),
+          targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
+          `Mobile OTP verified via SMS authentication gateway for transition to ${targetRole}.`,
+          undefined,
+          'MOBILE_OTP_VERIFIED'
+        );
+
+        // Terminate old session
+        const oldSessionType: AuditEventType = currentRole === 'PATIENT' ? 'PATIENT_SESSION_TERMINATED' : 'PROFESSIONAL_SESSION_TERMINATED';
+        addAuditEvent(
+          'Previous Session Terminated',
+          currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
+          currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+          `Active ${currentRole} session terminated and role-scoped state purged.`,
+          undefined,
+          oldSessionType
+        );
+
+        // Clear role-scoped state (Section 18, 20)
+        setSelectedAssessmentId(null);
+
+        // Create new role session
+        const newSessionId = data.newSessionId || `SES-MOB-${Date.now().toString(36).toUpperCase()}`;
+        const newPermissions = targetRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
+        const newIdentityId = targetRole === 'PATIENT' 
+          ? (patientIdentity?.patientId || 'PAT-2026-00124') 
+          : (professionalIdentity?.professionalId || 'PROF-DEMO-00451');
+
+        const newSession: AuthSession = {
+          sessionId: newSessionId,
+          userId: targetRole === 'PATIENT' ? (patientIdentity?.userId || 'USR-DEMO-001') : (professionalIdentity?.userId || 'USR-DEMO-002'),
+          role: targetRole,
+          identityId: newIdentityId,
+          permissions: newPermissions,
+          issuedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+          verifiedRoles: currentSession?.verifiedRoles || ['PATIENT', 'HEALTHCARE_PROFESSIONAL'],
+          authAssuranceLevel: 'HIGH_ASSURANCE',
+          stepUpVerifiedAt: new Date().toISOString(),
+          clinicalJustification: clinicalJustification || data.clinicalJustification || (targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Active Clinical Review' : 'Patient Self-Service'),
+          patientIdentity: patientIdentity || undefined,
+          professionalIdentity: professionalIdentity || undefined
+        };
+
+        setCurrentSession(newSession);
+        setCurrentRole(targetRole);
+
+        const newSessionType: AuditEventType = targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'PROFESSIONAL_SESSION_CREATED' : 'PATIENT_SESSION_CREATED';
+        addAuditEvent(
+          'Target Workspace Session Created',
+          targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Doctor') : (currentPatient?.name || 'Patient'),
+          targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
+          `New ${targetRole} session established (${newSessionId}) with ${newPermissions.length} isolated permissions.`,
+          undefined,
+          newSessionType
+        );
+
+        if (targetRole === 'PATIENT') {
+          navigate('/patient/dashboard');
+        } else {
+          navigate('/clinical/dashboard');
+        }
+
+        return { success: true, targetRole, sessionToken: newSessionId, newSession };
+      }
+
+      addAuditEvent(
+        'Mobile OTP Verification Failed',
+        currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
+        currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+        `Mobile OTP verification failed: ${data.error || 'Incorrect code'}. Workspace transition blocked.`,
+        undefined,
+        'MOBILE_OTP_FAILED'
+      );
+
+      return {
+        success: false,
+        message: data.error || 'The verification code is incorrect. Please try again.',
+        attemptsRemaining: data.attemptsRemaining
+      };
+    } catch {
+      return { success: false, message: 'Network error during mobile OTP verification.' };
+    }
+  };
+
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId) || assessments[0] || null;
 
   return (
@@ -656,6 +894,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPrivacyModalOpen,
         setDemoGuideOpen,
         setDemoGuideStep,
+        sendEmailOtp,
+        verifyEmailOtp,
+        sendMobileOtpForWorkspaceSwitch,
+        verifyMobileOtpForWorkspaceSwitch,
       }}
     >
       {children}

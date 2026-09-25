@@ -122,6 +122,59 @@ export interface StepUpChallengeResult {
   attemptsRemaining?: number;
 }
 
+export interface EmailOtpSendResponse {
+  success: boolean;
+  message: string;
+  maskedEmail?: string;
+  cooldownSeconds?: number;
+  providerConfigured?: boolean;
+  provider?: string;
+  missingConfig?: string[];
+  devPreviewToken?: string;
+}
+
+export interface EmailOtpVerifyResponse {
+  success: boolean;
+  message?: string;
+  sessionToken?: string;
+  role?: UserRole;
+  patientId?: string;
+  professionalId?: string;
+  userName?: string;
+  attemptsRemaining?: number;
+}
+
+export interface MobileOtpSendResponse {
+  success: boolean;
+  message: string;
+  maskedMobile?: string;
+  cooldownSeconds?: number;
+  expiresInSeconds?: number;
+  providerConfigured?: boolean;
+  provider?: string;
+  missingConfig?: string[];
+  devPreviewToken?: string;
+}
+
+export interface MobileOtpVerifyResponse {
+  success: boolean;
+  message?: string;
+  targetRole?: UserRole;
+  sessionToken?: string;
+  newSession?: AuthSession;
+  attemptsRemaining?: number;
+}
+
+export interface ProviderConfigStatus {
+  emailProvider: string;
+  emailConfigured: boolean;
+  missingEmailConfig: string[];
+  smsProvider: string;
+  smsConfigured: boolean;
+  missingSmsConfig: string[];
+  isDevMode: boolean;
+}
+
 export type RiskLevel = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export type AssessmentStatus = 'WAITING_REVIEW' | 'IN_REVIEW' | 'REVIEWED' | 'INFO_REQUESTED' | 'REFERRED';
@@ -355,7 +408,19 @@ export type AuditEventType =
   | 'VOICE_RECORDING_ACCESSED'
   | 'STEP_UP_CHALLENGE_ISSUED'
   | 'STEP_UP_CHALLENGE_VERIFIED'
-  | 'STEP_UP_CHALLENGE_FAILED';
+  | 'STEP_UP_CHALLENGE_FAILED'
+  | 'WORKSPACE_CHANGE_REQUESTED'
+  | 'MOBILE_OTP_SENT'
+  | 'MOBILE_OTP_VERIFIED'
+  | 'MOBILE_OTP_FAILED'
+  | 'WORKSPACE_CHANGE_DENIED'
+  | 'PATIENT_SESSION_TERMINATED'
+  | 'PROFESSIONAL_SESSION_CREATED'
+  | 'PROFESSIONAL_SESSION_TERMINATED'
+  | 'PATIENT_SESSION_CREATED'
+  | 'EMAIL_OTP_SENT'
+  | 'EMAIL_OTP_VERIFIED'
+  | 'EMAIL_OTP_FAILED';
 
 export interface AuditEvent {
   id: string;

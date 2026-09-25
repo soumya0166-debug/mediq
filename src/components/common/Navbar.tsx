@@ -139,7 +139,7 @@ export const Navbar: React.FC = () => {
             {/* Preferred Language Selector (Section 37 - Preserves Role Separation) */}
             <LanguageSelector variant="header" />
 
-            {/* Explicit Role Indicator & Workspace Badge (Section 40) */}
+            {/* Explicit Role Indicator & Workspace Badge */}
             {!isAuthPage && (
               <div className="flex items-center gap-2">
                 {isPatient ? (
@@ -152,19 +152,6 @@ export const Navbar: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block animate-pulse" />
                     <span className="uppercase tracking-wider text-[10px]">CLINICAL REVIEW WORKSPACE</span>
                   </div>
-                )}
-
-                {/* Secure Workspace Switching Trigger (Section 16, 26, 27) */}
-                {verifiedRoles.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => openWorkspaceSwitcher()}
-                    className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs"
-                    title={isPatient ? "Switch to verified Healthcare Professional Workspace" : "Switch to verified Patient Workspace"}
-                  >
-                    <ArrowRightLeft className="w-3.5 h-3.5 text-teal-600" />
-                    <span className="hidden md:inline">Switch Workspace</span>
-                  </button>
                 )}
               </div>
             )}
@@ -180,35 +167,80 @@ export const Navbar: React.FC = () => {
               <span className="sm:hidden font-bold">Demo</span>
             </button>
 
-            {/* Privacy Center Button */}
-            <button
-              onClick={() => setPrivacyModalOpen(true)}
-              className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-slate-600 hover:text-[#0A1E3F] hover:bg-slate-100 text-xs font-semibold border border-transparent hover:border-slate-200 transition-colors hidden md:flex items-center gap-1.5 flex-shrink-0"
-              title="Open Consent & Privacy Center"
-            >
-              <Lock className="w-3.5 h-3.5 text-teal-600" />
-              <span>{t('nav.consent')}</span>
-            </button>
-
-            {/* User Profile / Status */}
+            {/* Account & Security Dropdown Trigger (Section 13 Spec) */}
             {!isAuthPage ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <div className="text-right hidden xl:block">
-                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1 justify-end">
-                    <span>{isPatient ? currentPatient?.name : currentDoctor?.name}</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" title="Verified Identity" />
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    {isPatient ? currentPatient?.id : currentDoctor?.medicalRegistrationId}
-                  </div>
-                </div>
-                <button 
-                  onClick={logout}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors"
-                  title={t('nav.signOut')}
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold transition-all shadow-2xs"
+                  title="Account, Verified Identities & Security Settings"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4 text-teal-700" />
+                  <span className="hidden lg:inline font-bold">Account & Security</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
                 </button>
+
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block group-focus-within:block z-50 text-xs animate-in fade-in">
+                  
+                  {/* Active Identity Summary */}
+                  <div className="px-3.5 py-2 border-b border-slate-100 space-y-0.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Verified Identity
+                    </div>
+                    <div className="font-bold text-slate-900 truncate">
+                      {isPatient ? currentPatient?.name : currentDoctor?.name}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {isPatient ? currentPatient?.id : currentDoctor?.medicalRegistrationId}
+                    </div>
+                  </div>
+
+                  {/* Security Action 1: Change Verified Workspace (Section 13, 14, 18) */}
+                  {verifiedRoles.length > 1 && (
+                    <div className="p-1 border-b border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => openWorkspaceSwitcher()}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-teal-50/70 text-slate-800 hover:text-teal-950 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                        <div>
+                          <div className="font-bold text-xs">Change Verified Workspace</div>
+                          <div className="text-[10px] text-slate-500">Secured via Real Mobile OTP</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Security Action 2: Consent & Privacy */}
+                  <div className="p-1 border-b border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setPrivacyModalOpen(true)}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 font-medium transition-colors flex items-center gap-2"
+                    >
+                      <Lock className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <div>
+                        <div className="font-semibold text-xs">Consent & Data Sharing</div>
+                        <div className="text-[10px] text-slate-400">Manage health records access</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Security Action 3: Sign Out */}
+                  <div className="p-1">
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-50 text-red-700 font-medium transition-colors flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4 text-red-600 flex-shrink-0" />
+                      <span className="font-bold text-xs">{t('nav.signOut')}</span>
+                    </button>
+                  </div>
+
+                </div>
               </div>
             ) : (
               <button

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export const PatientRegisterPage: React.FC = () => {
-  const { navigate, loginAsPatient, addAuditEvent } = useApp();
+  const { navigate, loginAsPatient, addAuditEvent, sendEmailOtp, verifyEmailOtp } = useApp();
   const { locale, setLocale, t } = useLanguage();
 
   // Multi-step signup: Step 1 Basic Details, Step 2 Digital Health Identity, Step 3 Consent (Sections 7 & 8)
@@ -32,6 +32,18 @@ export const PatientRegisterPage: React.FC = () => {
   const [mobileNumber, setMobileNumber] = useState('+91 98765 43210');
   const [email, setEmail] = useState('riya.das.demo@careq-health.org');
   const [preferredLanguage, setPreferredLanguage] = useState<SupportedLocale>(locale);
+
+  // Email OTP Verification state for Step 1
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [emailOtpDigits, setEmailOtpDigits] = useState(['', '', '', '', '', '']);
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpError, setEmailOtpError] = useState<string | null>(null);
+  const [emailTimeLeft, setEmailTimeLeft] = useState(300);
+  const [emailResendCooldown, setEmailResendCooldown] = useState(0);
+  const [devEmailInboxToken, setDevEmailInboxToken] = useState<string | null>(null);
+  const [devOtpPreview, setDevOtpPreview] = useState<string | null>(null);
 
   // Step 2: Digital Health Identity (Section 7 Spec - Simulated Demo ID)
   const [demoHealthId, setDemoHealthId] = useState('XX-9482-1029-4821');
@@ -57,6 +69,98 @@ export const PatientRegisterPage: React.FC = () => {
         `Assigned synthetic Patient ID: ${generatedPatientId}`
       );
     }, 600);
+  };
+
+  // Timer effects for Email OTP in Registration
+  React.useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+    if (emailOtpSent && !isEmailVerified && emailTimeLeft > 0) {
+      timer = setInterval(() => {
+        setEmailTimeLeft(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [emailOtpSent, isEmailVerified, emailTimeLeft]);
+
+  React.useEffect(() => {
+    let cooldownTimer: ReturnType<typeof setInterval>;
+    if (emailResendCooldown > 0) {
+      cooldownTimer = setInterval(() => {
+        setEmailResendCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(cooldownTimer);
+  }, [emailResendCooldown]);
+
+  const handleSendEmailVerification = async () => {
+    if (!email || !email.includes('@')) {
+      setEmailOtpError('Please enter a valid email address.');
+      return;
+    }
+    setIsSendingEmailOtp(true);
+    setEmailOtpError(null);
+    setDevOtpPreview(null);
+
+    const res = await sendEmailOtp(email.trim(), 'signup', 'PATIENT');
+    setIsSendingEmailOtp(false);
+
+    if (res.success) {
+      setEmailOtpSent(true);
+      setEmailTimeLeft(300);
+      setEmailResendCooldown(60);
+      setEmailOtpDigits(['', '', '', '', '', '']);
+      if (res.devPreviewToken) {
+        setDevEmailInboxToken(res.devPreviewToken);
+      }
+    } else {
+      setEmailOtpError(res.message || 'Could not dispatch verification code to email.');
+    }
+  };
+
+  const handleVerifyEmailOtpCode = async (codeToVerify?: string) => {
+    const code = codeToVerify || emailOtpDigits.join('');
+    if (code.length !== 6) {
+      setEmailOtpError('Please enter all 6 digits.');
+      return;
+    }
+    setIsVerifyingEmailOtp(true);
+    setEmailOtpError(null);
+
+    const res = await verifyEmailOtp(email.trim(), code, 'signup');
+    setIsVerifyingEmailOtp(false);
+
+    if (res.success) {
+      setIsEmailVerified(true);
+      setEmailOtpError(null);
+    } else {
+      setEmailOtpError(res.message || 'The verification code is incorrect. Please try again.');
+    }
+  };
+
+  const handleInspectDevInbox = async () => {
+    try {
+      const res = await fetch('/api/dev/inbox');
+      const data = await res.json();
+      if (data.success && data.messages.length > 0) {
+        const latest = data.messages[0];
+        setDevOtpPreview(`Code: ${latest.code} (To: ${latest.to})`);
+        const split = latest.code.split('');
+        setEmailOtpDigits(split);
+      }
+    } catch {
+      setEmailOtpError('Could not connect to dev mailbox.');
+    }
+  };
+
+  const handleContinueToStep2 = () => {
+    if (!isEmailVerified) {
+      setEmailOtpError('Email verification is required before proceeding to Step 2. Please verify your email.');
+      if (!emailOtpSent) {
+        handleSendEmailVerification();
+      }
+      return;
+    }
+    setStep(2);
   };
 
   const handleCreateAccount = () => {
@@ -188,16 +292,123 @@ export const PatientRegisterPage: React.FC = () => {
                 />
               </div>
 
-              {/* Email */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">{t('auth.emailAddress')}</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. riya@careq.org"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-hidden font-medium"
-                />
+              {/* Email with OTP Verification status */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700">{t('auth.emailAddress')}</label>
+                  {isEmailVerified ? (
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>Email Verified with OTP</span>
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      OTP Verification Required
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    disabled={isEmailVerified}
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setIsEmailVerified(false);
+                      setEmailOtpSent(false);
+                      setEmailOtpError(null);
+                    }}
+                    placeholder="e.g. riya@careq.org"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-hidden font-medium disabled:opacity-75 disabled:bg-slate-100"
+                  />
+                  {!isEmailVerified && (
+                    <button
+                      type="button"
+                      disabled={isSendingEmailOtp || !email.includes('@')}
+                      onClick={handleSendEmailVerification}
+                      className="px-4 py-2 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-2xs transition-all disabled:opacity-50"
+                    >
+                      {isSendingEmailOtp ? 'Sending...' : emailOtpSent ? 'Resend OTP' : 'Send OTP'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Email OTP Verification Box */}
+                {!isEmailVerified && emailOtpSent && (
+                  <div className="mt-3 p-3.5 bg-blue-50/50 border border-blue-200 rounded-xl space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-[#0A1E3F] flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Enter 6-digit Email Verification Code</span>
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        Expires in {Math.floor(emailTimeLeft / 60)}:{(emailTimeLeft % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    {devEmailInboxToken && (
+                      <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded border border-blue-200">
+                        <span className="text-slate-600 font-medium">Dev Mailbox Available:</span>
+                        <div className="flex items-center gap-2">
+                          {devOtpPreview && <span className="font-mono font-bold text-emerald-700">{devOtpPreview}</span>}
+                          <button
+                            type="button"
+                            onClick={handleInspectDevInbox}
+                            className="font-bold text-teal-800 hover:underline"
+                          >
+                            Inspect Mailbox
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        {emailOtpDigits.map((d, i) => (
+                          <input
+                            key={i}
+                            type="text"
+                            maxLength={1}
+                            value={d}
+                            onChange={(e) => {
+                              const val = e.target.value.slice(-1);
+                              if (/^\d*$/.test(val)) {
+                                const newDigits = [...emailOtpDigits];
+                                newDigits[i] = val;
+                                setEmailOtpDigits(newDigits);
+                                if (val && i < 5) {
+                                  const next = document.getElementById(`reg-email-otp-${i + 1}`);
+                                  next?.focus();
+                                }
+                                if (newDigits.join('').length === 6) {
+                                  handleVerifyEmailOtpCode(newDigits.join(''));
+                                }
+                              }
+                            }}
+                            id={`reg-email-otp-${i}`}
+                            className="w-9 h-10 text-center font-mono font-bold text-base border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-slate-600 outline-hidden"
+                          />
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isVerifyingEmailOtp || emailOtpDigits.includes('')}
+                        onClick={() => handleVerifyEmailOtpCode()}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-2xs transition-all"
+                      >
+                        {isVerifyingEmailOtp ? 'Verifying...' : 'Verify OTP'}
+                      </button>
+                    </div>
+
+                    {emailOtpError && (
+                      <div className="text-xs text-red-600 font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{emailOtpError}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Preferred Language */}
@@ -241,7 +452,7 @@ export const PatientRegisterPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={handleContinueToStep2}
                 className="px-6 py-2.5 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg font-bold text-xs shadow-xs transition-all flex items-center gap-1.5"
               >
                 <span>{t('auth.verifyIdentityBtn')}</span>
