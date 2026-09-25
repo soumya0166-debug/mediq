@@ -6,7 +6,7 @@ interface LanguageContextType {
   setLocale: (locale: SupportedLocale) => void;
   patientCommLocale: SupportedLocale;
   setPatientCommLocale: (locale: SupportedLocale) => void;
-  t: (path: string, fallback?: string) => string;
+  t: (path: string, paramsOrFallback?: Record<string, any> | string, fallback?: string) => string;
   locales: LocaleMetadata[];
   currentLocaleMetadata: LocaleMetadata;
   isFirstVisitPromptOpen: boolean;
@@ -68,12 +68,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [locale]);
 
   /**
-   * Safe path-based translation lookup with automatic English fallback (Section 24)
+   * Safe path-based translation lookup with variable interpolation and English fallback
    */
-  const t = useCallback((path: string, fallback?: string): string => {
+  const t = useCallback((path: string, paramsOrFallback?: Record<string, any> | string, fallback?: string): string => {
     const keys = path.split('.');
-    
-    // Attempt lookup in active locale
+    const params = typeof paramsOrFallback === 'object' && paramsOrFallback !== null ? paramsOrFallback : undefined;
+    const defaultFallback = typeof paramsOrFallback === 'string' ? paramsOrFallback : fallback;
+
+    let resultString: string | undefined;
+
+    // 1. Attempt lookup in active locale
     let current: any = TRANSLATIONS[locale];
     let foundInLocale = true;
     for (const key of keys) {
@@ -86,26 +90,37 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     if (foundInLocale && typeof current === 'string') {
-      return current;
-    }
+      resultString = current;
+    } else {
+      // 2. Fallback hierarchy: en-IN -> defaultFallback -> path
+      let fallbackCurrent: any = TRANSLATIONS['en-IN'];
+      let foundInFallback = true;
+      for (const key of keys) {
+        if (fallbackCurrent && typeof fallbackCurrent === 'object' && key in fallbackCurrent) {
+          fallbackCurrent = fallbackCurrent[key];
+        } else {
+          foundInFallback = false;
+          break;
+        }
+      }
 
-    // Fallback hierarchy: en-IN -> fallback parameter -> key
-    let fallbackCurrent: any = TRANSLATIONS['en-IN'];
-    let foundInFallback = true;
-    for (const key of keys) {
-      if (fallbackCurrent && typeof fallbackCurrent === 'object' && key in fallbackCurrent) {
-        fallbackCurrent = fallbackCurrent[key];
+      if (foundInFallback && typeof fallbackCurrent === 'string') {
+        resultString = fallbackCurrent;
       } else {
-        foundInFallback = false;
-        break;
+        resultString = defaultFallback || path;
       }
     }
 
-    if (foundInFallback && typeof fallbackCurrent === 'string') {
-      return fallbackCurrent;
+    // 3. Interpolate dynamic parameters like {{name}} or {name}
+    if (params && typeof resultString === 'string') {
+      for (const [pKey, pVal] of Object.entries(params)) {
+        resultString = resultString
+          .replace(new RegExp(`\\{\\{${pKey}\\}\\}`, 'g'), String(pVal))
+          .replace(new RegExp(`\\{${pKey}\\}`, 'g'), String(pVal));
+      }
     }
 
-    return fallback || path;
+    return resultString;
   }, [locale]);
 
   const currentLocaleMetadata = SUPPORTED_LOCALES.find(l => l.id === locale) || SUPPORTED_LOCALES[0];

@@ -66,10 +66,10 @@ export const PatientDashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
-              {t('patient.dashboardTitle')}, {currentPatient?.name?.split(' ')[0] || 'Riya'}
+              {t('patient.dashboard.greeting', { name: currentPatient?.name?.split(' ')[0] || 'Riya' })}
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
-              {t('patient.dashboardSubtitle')}
+              {t('patient.dashboard.subtitle')}
             </p>
           </div>
 
@@ -80,7 +80,7 @@ export const PatientDashboard: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold mt-0.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                <span>{t('auth.identityVerifiedBadge')}</span>
+                <span>{t('patient.dashboard.identityVerified')}</span>
               </div>
             </div>
           </div>
@@ -208,13 +208,13 @@ export const PatientDashboard: React.FC = () => {
       <div className="bg-white rounded-xl p-8 sm:p-10 border border-slate-200 shadow-sm space-y-6">
         <div className="max-w-3xl space-y-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded">
-            Pre-Clinical Ingestion
+            {t('patient.dashboard.preClinicalIngestion')}
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
-            {t('patient.startAssessment')}
+            {t('patient.dashboard.startAssessment')}
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed">
-            {t('patient.startAssessmentDesc')}
+            {t('patient.dashboard.startAssessmentDesc')}
           </p>
         </div>
 
@@ -224,7 +224,7 @@ export const PatientDashboard: React.FC = () => {
             onClick={() => navigate('/patient/new-assessment')}
             className="px-8 py-3.5 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg text-sm font-bold shadow-xs transition-all flex items-center gap-2"
           >
-            <span>{t('assessment.start')}</span>
+            <span>{t('patient.dashboard.startAssessment')}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -239,8 +239,8 @@ export const PatientDashboard: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <Mic className="w-4 h-4 text-teal-700" />
               <div>
-                <span className="font-bold text-xs text-slate-900 block">{t('patient.voiceIntake')}</span>
-                <span className="text-[11px] text-slate-500">English • हिन्दी • ଓଡ଼ିଆ</span>
+                <span className="font-bold text-xs text-slate-900 block">{t('patient.dashboard.voiceIntake')}</span>
+                <span className="text-[11px] text-slate-500">{t('patient.dashboard.voiceLanguages')}</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
@@ -253,8 +253,8 @@ export const PatientDashboard: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <FileText className="w-4 h-4 text-slate-700" />
               <div>
-                <span className="font-bold text-xs text-slate-900 block">{t('patient.uploadReport')}</span>
-                <span className="text-[11px] text-slate-500">Automated lab OCR</span>
+                <span className="font-bold text-xs text-slate-900 block">{t('patient.dashboard.uploadReport')}</span>
+                <span className="text-[11px] text-slate-500">{t('patient.dashboard.automatedLabOcr')}</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
@@ -267,8 +267,8 @@ export const PatientDashboard: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-slate-700" />
               <div>
-                <span className="font-bold text-xs text-slate-900 block">{t('patient.symptoms')}</span>
-                <span className="text-[11px] text-slate-500">Detailed plain input</span>
+                <span className="font-bold text-xs text-slate-900 block">{t('patient.dashboard.describeSymptoms')}</span>
+                <span className="text-[11px] text-slate-500">{t('patient.dashboard.detailedPlainInput')}</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
@@ -285,17 +285,17 @@ export const PatientDashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">
-              {t('patient.currentAssessment')}
+              {t('patient.dashboard.currentAssessment')}
             </h3>
             <span className="text-[11px] font-mono text-slate-500">
-              Case Ref: {latestAssessment?.id || 'ASM-2026-00124'}
+              {t('patient.dashboard.caseRef')}: {latestAssessment?.id || 'ASM-2026-00124'}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-              <span>{t('patient.awaitingReview')}</span>
+              <span>{t('patient.dashboard.awaitingReview')}</span>
             </span>
           </div>
         </div>
@@ -307,33 +307,33 @@ export const PatientDashboard: React.FC = () => {
             <div className="p-3 bg-white rounded-lg border border-emerald-200 space-y-1 shadow-2xs">
               <div className="font-bold text-emerald-800 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>{t('patient.infoSubmitted')}</span>
+                <span>{t('patient.dashboard.stepSubmitted')}</span>
               </div>
-              <div className="text-[11px] text-slate-500">Symptoms & voice recorded</div>
+              <div className="text-[11px] text-slate-500">{t('patient.dashboard.symptomsVoiceRecorded')}</div>
             </div>
 
             <div className="p-3 bg-white rounded-lg border border-emerald-200 space-y-1 shadow-2xs">
               <div className="font-bold text-emerald-800 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>{t('patient.consentGiven')}</span>
+                <span>{t('patient.dashboard.stepConsent')}</span>
               </div>
-              <div className="text-[11px] text-slate-500">Categories authorized</div>
+              <div className="text-[11px] text-slate-500">{t('patient.dashboard.categoriesAuthorized')}</div>
             </div>
 
             <div className="p-3 bg-amber-50/70 rounded-lg border border-amber-200 space-y-1 shadow-2xs">
               <div className="font-bold text-amber-900 flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-amber-600" />
-                <span>{t('patient.workerReview')}</span>
+                <span>{t('patient.dashboard.stepReview')}</span>
               </div>
-              <div className="text-[11px] text-slate-600">Pending examination</div>
+              <div className="text-[11px] text-slate-600">{t('patient.dashboard.pendingExamination')}</div>
             </div>
 
             <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1 shadow-2xs opacity-75">
               <div className="font-semibold text-slate-600 flex items-center gap-1.5">
                 <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block" />
-                <span>{t('patient.followUpIfRequired')}</span>
+                <span>{t('patient.dashboard.stepFollowUp')}</span>
               </div>
-              <div className="text-[11px] text-slate-400">Next care step</div>
+              <div className="text-[11px] text-slate-400">{t('patient.dashboard.nextCareStep')}</div>
             </div>
 
           </div>
@@ -350,7 +350,7 @@ export const PatientDashboard: React.FC = () => {
             }}
             className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
           >
-            <span>{t('patient.viewAssessment')}</span>
+            <span>{t('patient.dashboard.viewAssessment')}</span>
             <ChevronRight className="w-4 h-4 text-slate-500" />
           </button>
         </div>
@@ -366,16 +366,16 @@ export const PatientDashboard: React.FC = () => {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Locker Documents
+              {t('patient.dashboard.lockerDocuments')}
             </span>
             <h3 className="font-extrabold text-base text-slate-900">
-              {t('patient.myReports')}
+              {t('patient.dashboard.myReports')}
             </h3>
             <div className="text-xl font-bold font-mono text-slate-800 pt-1">
-              4 documents
+              {t('patient.dashboard.reportsCount')}
             </div>
             <p className="text-xs text-slate-500">
-              CBC panel, Chest X-ray, and Biochemistry OCR extracts.
+              {t('patient.dashboard.reportsDesc')}
             </p>
           </div>
 
@@ -383,7 +383,7 @@ export const PatientDashboard: React.FC = () => {
             onClick={() => navigate('/patient/reports')}
             className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1"
           >
-            <span>{t('patient.viewReports')}</span>
+            <span>{t('patient.dashboard.viewReports')}</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           </button>
         </div>
@@ -392,16 +392,16 @@ export const PatientDashboard: React.FC = () => {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Care Progression
+              {t('patient.dashboard.careProgression')}
             </span>
             <h3 className="font-extrabold text-base text-slate-900">
-              {t('patient.healthTimeline')}
+              {t('patient.dashboard.healthTimeline')}
             </h3>
             <div className="text-xs font-semibold text-slate-700 pt-1">
-              Last updated: <span className="font-bold text-slate-900">24 Sep 2026</span>
+              {t('patient.dashboard.lastUpdated')}: <span className="font-bold text-slate-900">24 Sep 2026</span>
             </div>
             <p className="text-xs text-slate-500">
-              Longitudinal log of submissions, reviews, and clinical inquiries.
+              {t('patient.dashboard.timelineDesc')}
             </p>
           </div>
 
@@ -409,7 +409,7 @@ export const PatientDashboard: React.FC = () => {
             onClick={() => navigate('/patient/timeline')}
             className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1"
           >
-            <span>{t('patient.viewTimeline')}</span>
+            <span>{t('patient.dashboard.viewTimeline')}</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           </button>
         </div>
@@ -418,17 +418,17 @@ export const PatientDashboard: React.FC = () => {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
-              Healthcare Inquiry
+              {t('patient.dashboard.healthcareInquiry')}
             </span>
             <h3 className="font-extrabold text-base text-slate-900">
-              {t('patient.infoRequests')}
+              {t('patient.dashboard.infoRequests')}
             </h3>
             <div className="text-xs font-semibold text-amber-800 pt-1 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-              <span>{pendingDoctorQuestion ? '1 response required' : '0 pending requests'}</span>
+              <span>{pendingDoctorQuestion ? t('patient.dashboard.responseRequired') : t('patient.dashboard.noPendingRequests')}</span>
             </div>
             <p className="text-xs text-slate-500">
-              Clinician questions regarding breathing and thermometer readings.
+              {t('patient.dashboard.inquiryDesc')}
             </p>
           </div>
 
@@ -441,7 +441,7 @@ export const PatientDashboard: React.FC = () => {
             }}
             className="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1"
           >
-            <span>{t('patient.respond')}</span>
+            <span>{t('patient.dashboard.respond')}</span>
             <ArrowRight className="w-3.5 h-3.5 text-amber-700" />
           </button>
         </div>
