@@ -1,5 +1,6 @@
 import React from 'react';
 import { RiskLevel } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface RiskBadgeProps {
   level: RiskLevel;
@@ -8,21 +9,23 @@ interface RiskBadgeProps {
 }
 
 export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'md' }) => {
+  const { t } = useLanguage();
+
   const configs = {
     HIGH: {
-      label: 'HIGH PRIORITY',
+      label: t('clinical.priorityUrgency'),
       sublabel: 'Urgent Clinical Review',
       badgeBg: 'bg-red-50 text-red-700 border-red-200',
       dotColor: 'bg-red-600',
     },
     MEDIUM: {
-      label: 'ATTENTION',
+      label: t('clinical.attentionUrgency'),
       sublabel: 'Timely Review',
       badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
       dotColor: 'bg-amber-500',
     },
     LOW: {
-      label: 'ROUTINE',
+      label: t('clinical.routineUrgency'),
       sublabel: 'Standard Queue',
       badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
       dotColor: 'bg-emerald-600',
@@ -40,7 +43,7 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'md' }) => {
   return (
     <span
       className={`inline-flex items-center rounded-md border ${config.badgeBg} ${sizeClasses} tracking-tight select-none`}
-      title="Urgency categorization only — not a clinical diagnosis"
+      title={t('clinical.urgencyDisclaimer')}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${config.dotColor} flex-shrink-0`} />
       <span>{config.label}</span>

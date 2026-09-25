@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { SAMPLE_REPORTS_LIBRARY } from '../../data/mockData';
 import { 
   FileText, 
@@ -15,6 +16,7 @@ import {
 
 export const PatientReportsPage: React.FC = () => {
   const { currentPatient, assessments, navigate } = useApp();
+  const { t } = useLanguage();
 
   const [activeReportIndex, setActiveReportIndex] = useState(0);
   const sampleReports = SAMPLE_REPORTS_LIBRARY;
@@ -27,20 +29,20 @@ export const PatientReportsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1 rounded-md">
-            Digital Health Locker
+            {t('patient.lockerTitle')}
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
-            Medical Reports & OCR Records
+            {t('patient.lockerSubtitle')}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Structured laboratory parameters extracted automatically for clinician review.
+            {t('patient.lockerDesc')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 font-medium flex items-center gap-1.5 shadow-2xs">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            Locker ID: {currentPatient?.id}
+            {t('patient.patientIdLabel')}: {currentPatient?.id}
           </span>
         </div>
       </div>

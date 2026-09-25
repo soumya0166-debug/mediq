@@ -53,10 +53,10 @@ export const PatientConsentPage: React.FC = () => {
             Patient Data Rights
           </span>
           <h1 className="text-xl sm:text-2xl font-extrabold text-[#0A1E3F] tracking-tight mt-0.5">
-            {t('consent.title')}
+            {t('consent.pageTitle')}
           </h1>
           <p className="text-xs text-slate-500">
-            {t('consent.subtitle')}
+            {t('consent.pageSubtitle')}
           </p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export const PatientConsentPage: React.FC = () => {
         <div className="p-3.5 rounded-careq-md bg-teal-50/70 border border-teal-200 text-teal-950 flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-teal-700 flex-shrink-0" />
           <span>
-            <strong>{t('consent.rightsNotice')}</strong>
+            <strong>{t('consent.privacyNotice')}</strong>
           </span>
         </div>
 
@@ -75,40 +75,40 @@ export const PatientConsentPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="p-3.5 rounded-careq-md border border-slate-200 bg-slate-50 space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Who has access
+              {t('consent.whoHasAccess')}
             </span>
             <p className="font-bold text-slate-900">
-              Accredited Clinical Staff at CAREQ Demo PHC Jatni
+              {t('consent.whoHasAccessDesc')}
             </p>
             <p className="text-slate-500 text-[11px]">Facility ID: FAC-DEMO-OD-001</p>
           </div>
 
           <div className="p-3.5 rounded-careq-md border border-slate-200 bg-slate-50 space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Why they have access
+              {t('consent.whyAccess')}
             </span>
             <p className="font-bold text-slate-900">
-              Pre-clinical triage review, priority sorting, and referral dispatch
+              {t('consent.whyAccessDesc')}
             </p>
             <p className="text-slate-500 text-[11px]">Legitimate Public Health Purpose</p>
           </div>
 
           <div className="p-3.5 rounded-careq-md border border-slate-200 bg-slate-50 space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              When access expires
+              {t('consent.whenExpires')}
             </span>
             <p className="font-bold text-slate-900">
-              24-hour review window post-submission
+              {t('consent.whenExpiresDesc')}
             </p>
             <p className="text-slate-500 text-[11px]">Session auto-closes upon review completion</p>
           </div>
 
           <div className="p-3.5 rounded-careq-md border border-slate-200 bg-slate-50 space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Access Governance
+              {t('consent.accessGovernance')}
             </span>
             <p className="font-bold text-slate-900">
-              End-to-End Cryptographic Audit Trail
+              {t('consent.accessGovernanceDesc')}
             </p>
             <p className="text-slate-500 text-[11px]">Every clinician view logged with SHA-256 hash</p>
           </div>
@@ -117,14 +117,14 @@ export const PatientConsentPage: React.FC = () => {
         {/* What they can access: Category Toggles */}
         <div className="space-y-3 pt-2 border-t border-slate-200">
           <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
-            {t('consent.categories')}:
+            {t('consent.authorizeCategories')}
           </h3>
 
           <div className="space-y-2">
             <label className="flex items-center justify-between p-3.5 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
               <div>
-                <span className="font-bold text-slate-900 block">{t('consent.symptomsCat')}</span>
-                <span className="text-[11px] text-slate-500">Subjective descriptions of onset, fever duration, and discomfort</span>
+                <span className="font-bold text-slate-900 block">{t('consent.symptomsTitle')}</span>
+                <span className="text-[11px] text-slate-500">{t('consent.symptomsDesc')}</span>
               </div>
               <input
                 type="checkbox"
@@ -136,8 +136,8 @@ export const PatientConsentPage: React.FC = () => {
 
             <label className="flex items-center justify-between p-3.5 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
               <div>
-                <span className="font-bold text-slate-900 block">{t('consent.reportsCat')}</span>
-                <span className="text-[11px] text-slate-500">OCR parsed blood tests (CBC, Glucose) and X-ray summaries</span>
+                <span className="font-bold text-slate-900 block">{t('consent.reportsTitle')}</span>
+                <span className="text-[11px] text-slate-500">{t('consent.reportsDesc')}</span>
               </div>
               <input
                 type="checkbox"
@@ -149,8 +149,8 @@ export const PatientConsentPage: React.FC = () => {
 
             <label className="flex items-center justify-between p-3.5 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
               <div>
-                <span className="font-bold text-slate-900 block">{t('consent.voiceCat')}</span>
-                <span className="text-[11px] text-slate-500">Regional language audio stream converted into clinical transcript</span>
+                <span className="font-bold text-slate-900 block">{t('consent.voiceTitle')}</span>
+                <span className="text-[11px] text-slate-500">{t('consent.voiceDesc')}</span>
               </div>
               <input
                 type="checkbox"
@@ -162,8 +162,8 @@ export const PatientConsentPage: React.FC = () => {
 
             <label className="flex items-center justify-between p-3.5 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
               <div>
-                <span className="font-bold text-slate-900 block">{t('consent.translationCat')}</span>
-                <span className="text-[11px] text-slate-500">Standard English clinical translation for medical officer review</span>
+                <span className="font-bold text-slate-900 block">{t('consent.translationTitle')}</span>
+                <span className="text-[11px] text-slate-500">{t('consent.translationDesc')}</span>
               </div>
               <input
                 type="checkbox"
@@ -175,8 +175,8 @@ export const PatientConsentPage: React.FC = () => {
 
             <label className="flex items-center justify-between p-3.5 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
               <div>
-                <span className="font-bold text-slate-900 block">{t('consent.historyCat')}</span>
-                <span className="text-[11px] text-slate-500">Share previous historical assessments from prior clinic sessions</span>
+                <span className="font-bold text-slate-900 block">{t('consent.previousAssessmentsTitle')}</span>
+                <span className="text-[11px] text-slate-500">{t('consent.previousAssessmentsDesc')}</span>
               </div>
               <input
                 type="checkbox"
@@ -202,7 +202,7 @@ export const PatientConsentPage: React.FC = () => {
             }}
             className="text-xs text-red-600 font-bold hover:underline"
           >
-            {t('consent.revokeAccess')}
+            {t('consent.revokeAllAccessBtn')}
           </button>
 
           <button
@@ -212,10 +212,10 @@ export const PatientConsentPage: React.FC = () => {
             {savedSuccess ? (
               <>
                 <Check className="w-4 h-4 text-emerald-400" />
-                <span>{t('common.success')}</span>
+                <span>{t('consent.savedToLedger')}</span>
               </>
             ) : (
-              <span>{t('common.save')}</span>
+              <span>{t('consent.savePreferencesBtn')}</span>
             )}
           </button>
         </div>

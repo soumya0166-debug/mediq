@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Calendar, 
   Activity, 
@@ -13,6 +14,7 @@ import {
 
 export const PatientTimelinePage: React.FC = () => {
   const { currentPatient, assessments, navigate } = useApp();
+  const { t } = useLanguage();
 
   const timelineEntries = [
     {
@@ -80,13 +82,13 @@ export const PatientTimelinePage: React.FC = () => {
         </button>
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-            Section 39 • Longitudinal Record
+            {t('nav.timeline')} • {t('patient.patientIdLabel')}: {currentPatient?.id}
           </span>
           <h1 className="text-xl sm:text-2xl font-extrabold text-[#0A1E3F] tracking-tight mt-0.5">
-            Personal Health Timeline
+            {t('patient.timelinePageTitle')}
           </h1>
           <p className="text-xs text-slate-500">
-            Chronological record of submitted assessments, OCR reports, and clinician review actions
+            {t('patient.timelinePageSubtitle')}
           </p>
         </div>
       </div>

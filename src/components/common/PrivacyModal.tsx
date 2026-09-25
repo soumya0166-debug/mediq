@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { X, ShieldCheck, Lock, Users, Clock, AlertCircle, Check } from 'lucide-react';
 
 export const PrivacyModal: React.FC = () => {
   const { isPrivacyModalOpen, setPrivacyModalOpen, currentPatient, updatePatientConsent } = useApp();
+  const { t } = useLanguage();
 
   const [categories, setCategories] = useState(
     currentPatient?.consentCategories || {
@@ -46,8 +48,8 @@ export const PrivacyModal: React.FC = () => {
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base text-slate-900">Consent & Access Center</h3>
-              <p className="text-xs text-slate-500">CAREQ Data Governance & Patient Control Framework</p>
+              <h3 className="font-extrabold text-base text-slate-900">{t('consent.pageTitle')}</h3>
+              <p className="text-xs text-slate-500">{t('consent.pageSubtitle')}</p>
             </div>
           </div>
           <button 
@@ -64,47 +66,44 @@ export const PrivacyModal: React.FC = () => {
           {/* Privacy statement banner */}
           <div className="p-3.5 rounded-careq-md bg-teal-50/70 border border-teal-200 text-teal-900 text-xs flex items-center gap-2.5">
             <Lock className="w-4 h-4 text-teal-700 flex-shrink-0" />
-            <span>
-              <strong>Your information is shared only with authorized clinical reviewers.</strong> 
-              You can inspect and customize data category permissions below.
-            </span>
+            <span>{t('consent.privacyNotice')}</span>
           </div>
 
           {/* Section 38: Who, What, Why, When */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Who has access
+                {t('consent.whoHasAccess')}
               </div>
               <p className="font-semibold text-slate-800">
-                Authorized clinical officers at {currentPatient?.assignedFacility || 'CAREQ Demo Primary Health Centre'}
+                {t('consent.whoHasAccessDesc')}
               </p>
             </div>
 
             <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Why they have access
+                {t('consent.whyAccess')}
               </div>
               <p className="font-semibold text-slate-800">
-                To perform triage priority review and prepare clinical referral notes
+                {t('consent.whyAccessDesc')}
               </p>
             </div>
 
             <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                When access expires
+                {t('consent.whenExpires')}
               </div>
               <p className="font-semibold text-slate-800">
-                Active triage session (auto-archives 24h post-review)
+                {t('consent.whenExpiresDesc')}
               </p>
             </div>
 
             <div className="p-3 rounded-careq-md border border-slate-200 bg-slate-50">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Security & Verification
+                {t('consent.accessGovernance')}
               </div>
               <p className="font-semibold text-slate-800">
-                Role-Based Access Control (RBAC) + SHA-256 Audit Trail
+                {t('consent.accessGovernanceDesc')}
               </p>
             </div>
           </div>
@@ -113,16 +112,15 @@ export const PrivacyModal: React.FC = () => {
           <div className="space-y-3 pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
-                What information can be accessed:
+                {t('consent.authorizeCategories')}
               </h4>
-              <span className="text-[11px] text-slate-500">Toggle categories anytime</span>
             </div>
 
             <div className="space-y-2 text-xs">
               <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                 <div>
-                  <span className="font-bold text-slate-800 block">Reported Symptoms & Notes</span>
-                  <span className="text-[11px] text-slate-500">Text descriptions, duration, and patient concerns</span>
+                  <span className="font-bold text-slate-800 block">{t('consent.symptomsTitle')}</span>
+                  <span className="text-[11px] text-slate-500">{t('consent.symptomsDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -134,8 +132,8 @@ export const PrivacyModal: React.FC = () => {
 
               <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                 <div>
-                  <span className="font-bold text-slate-800 block">Uploaded Laboratory Reports</span>
-                  <span className="text-[11px] text-slate-500">OCR extracted test values, reference intervals, and flags</span>
+                  <span className="font-bold text-slate-800 block">{t('consent.reportsTitle')}</span>
+                  <span className="text-[11px] text-slate-500">{t('consent.reportsDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -147,8 +145,8 @@ export const PrivacyModal: React.FC = () => {
 
               <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                 <div>
-                  <span className="font-bold text-slate-800 block">Voice Recording Transcript</span>
-                  <span className="text-[11px] text-slate-500">Transcribed audio clip from regional language input</span>
+                  <span className="font-bold text-slate-800 block">{t('consent.voiceTitle')}</span>
+                  <span className="text-[11px] text-slate-500">{t('consent.voiceDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -160,8 +158,8 @@ export const PrivacyModal: React.FC = () => {
 
               <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                 <div>
-                  <span className="font-bold text-slate-800 block">English Clinical Translation</span>
-                  <span className="text-[11px] text-slate-500">Machine translation prepared for clinician understanding</span>
+                  <span className="font-bold text-slate-800 block">{t('consent.translationTitle')}</span>
+                  <span className="text-[11px] text-slate-500">{t('consent.translationDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -173,8 +171,8 @@ export const PrivacyModal: React.FC = () => {
 
               <label className="flex items-center justify-between p-3 rounded-careq-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                 <div>
-                  <span className="font-bold text-slate-800 block">Previous Triage Assessments</span>
-                  <span className="text-[11px] text-slate-500">Share longitudinal history from prior visits</span>
+                  <span className="font-bold text-slate-800 block">{t('consent.previousAssessmentsTitle')}</span>
+                  <span className="text-[11px] text-slate-500">{t('consent.previousAssessmentsDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -190,7 +188,7 @@ export const PrivacyModal: React.FC = () => {
           <div className="bg-slate-100 rounded-careq-sm p-3 text-xs text-slate-500 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
             <div>
-              <strong>Demonstration Environment Notice:</strong> Real Aadhaar IDs and live biometric records are never collected. All patient tokens are synthetic demo records.
+              <strong>{t('common.syntheticDataNotice')}:</strong> {t('auth.step2Desc')}
             </div>
           </div>
 
@@ -210,7 +208,7 @@ export const PrivacyModal: React.FC = () => {
             }}
             className="text-xs text-red-600 font-bold hover:underline"
           >
-            Revoke All Access
+            {t('consent.revokeAllAccessBtn')}
           </button>
 
           <div className="flex gap-2">
@@ -218,7 +216,7 @@ export const PrivacyModal: React.FC = () => {
               onClick={() => setPrivacyModalOpen(false)}
               className="px-4 py-2 rounded-careq-sm border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -227,10 +225,10 @@ export const PrivacyModal: React.FC = () => {
               {savedSuccess ? (
                 <>
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Preferences Saved!</span>
+                  <span>{t('consent.savedToLedger')}</span>
                 </>
               ) : (
-                <span>Save Consent Preferences</span>
+                <span>{t('consent.savePreferencesBtn')}</span>
               )}
             </button>
           </div>

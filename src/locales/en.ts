@@ -41,7 +41,18 @@ export const enTranslations = {
     status: "Status",
     action: "Action",
     all: "All",
-    active: "Active"
+    active: "Active",
+    emergencyTitle: "Life-Threatening Emergency",
+    emergencyDesc: "For acute chest pain, severe dyspnea, or trauma, bypass digital intake and dial emergency response:",
+    emergencyAmbulance: "108 (Ambulance)",
+    emergencyNational: "112 (National)",
+    footerPlatformExperiences: "Platform Experiences",
+    footerGovernanceAudit: "Governance & Audit",
+    footerEmergencyNotice: "Emergency Triage Notice",
+    footerCopyright: "CAREQ © 2026 — Connected Healthcare System.",
+    footerConsentPolicy: "Consent Policy",
+    footerDataGovernance: "Data Governance",
+    footerDemoCredentials: "Demonstration Credentials"
   },
   nav: {
     dashboard: "Dashboard",
@@ -161,7 +172,18 @@ export const enTranslations = {
     stopRecordingBtn: "Stop Recording",
     submitResponseBtn: "Submit Response",
     recordNewVoice: "Record New Voice",
-    voiceLanguageSelector: "Speaking in:"
+    voiceLanguageSelector: "Speaking in:",
+    lockerTitle: "Digital Health Locker",
+    lockerSubtitle: "Medical Reports & OCR Records",
+    lockerDesc: "Structured laboratory parameters extracted automatically for clinician review.",
+    availableDocuments: "Available Documents",
+    viewDocument: "View Document",
+    downloadPdf: "Download PDF",
+    ocrExtractedData: "OCR Extracted Laboratory Data",
+    historyTitle: "Triage Assessment History",
+    historySubtitle: "Previous symptom assessments and clinical reviews",
+    timelinePageTitle: "Chronological Health Timeline",
+    timelinePageSubtitle: "Auditable sequence of symptom submissions, lab attachments, and clinician reviews"
   },
   clinical: {
     workspaceTitle: "Clinical Review Workspace",
@@ -252,7 +274,23 @@ export const enTranslations = {
     aiTranslationNotice: "AI-assisted translation — review original patient input before clinical interpretation.",
     completeClinicalReviewModalTitle: "Complete Clinical Review",
     completeClinicalReviewModalDesc: "Document your clinical triage note. This action attests that a qualified healthcare worker has reviewed the multimodal inputs.",
-    confirmReviewCompleteBtn: "Confirm Review Complete"
+    confirmReviewCompleteBtn: "Confirm Review Complete",
+    doctorLanguageProfileTitle: "Clinician Language Profile",
+    doctorLanguageProfileSubtitle: "Separate clinical workspace language from patient communication language",
+    interfaceLanguageLabel: "Interface Language (Workspace)",
+    patientCommLanguageLabel: "Patient Communication Language",
+    savePreferences: "Save Preferences",
+    queueFilterAll: "All",
+    queueFilterHigh: "High",
+    queueFilterWaiting: "Waiting",
+    queueFilterReviewed: "Reviewed",
+    queueFilterReferral: "Referral",
+    savedViewActive: "All Active",
+    savedViewPriority: "Priority Shift",
+    savedViewUnreviewed: "Unreviewed Lab Data",
+    sortByWaitTime: "Wait Time",
+    sortByUrgency: "Urgency",
+    sortByAge: "Age"
   },
   consent: {
     pageTitle: "Consent & Access Control",
@@ -316,6 +354,18 @@ export const enTranslations = {
     colAction: "Action & Operational Event",
     colCase: "Case Ref",
     colHash: "Hash Stamp"
+  },
+  assessment: {
+    start: "Start Assessment",
+    recordVoice: "Record Voice",
+    symptoms: "Symptoms",
+    continue: "Continue",
+    uploadReport: "Upload Diagnostic Reports",
+    previous: "Back",
+    reviewSubmission: "Review Information",
+    duration: "Duration",
+    submit: "Submit for Review",
+    assessmentSubmitted: "Assessment Submitted Successfully"
   },
   errors: {
     requiredField: "This field is required.",

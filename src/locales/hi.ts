@@ -41,7 +41,18 @@ export const hiTranslations = {
     status: "स्थिति",
     action: "कार्रवाई",
     all: "सभी",
-    active: "सक्रिय"
+    active: "सक्रिय",
+    emergencyTitle: "जीवन-घातक आपातकाल",
+    emergencyDesc: "तीव्र सीने में दर्द, सांस लेने में गंभीर कठिनाई या आघात के लिए, डिजिटल प्रक्रिया छोड़कर तुरंत आपातकालीन नंबर डायल करें:",
+    emergencyAmbulance: "108 (एम्बुलेंस)",
+    emergencyNational: "112 (राष्ट्रीय आपातकाल)",
+    footerPlatformExperiences: "प्लेटफ़ॉर्म अनुभव",
+    footerGovernanceAudit: "शासन एवं ऑडिट",
+    footerEmergencyNotice: "आपातकालीन ट्राइएज सूचना",
+    footerCopyright: "CAREQ © 2026 — कनेक्टेड हेल्थकेयर सिस्टम।",
+    footerConsentPolicy: "सहमति नीति",
+    footerDataGovernance: "डेटा शासन",
+    footerDemoCredentials: "डेमोंस्ट्रेशन क्रेडेंशियल्स"
   },
   nav: {
     dashboard: "डैशबोर्ड",
@@ -161,7 +172,18 @@ export const hiTranslations = {
     stopRecordingBtn: "रिकॉर्डिंग रोकें",
     submitResponseBtn: "उत्तर जमा करें",
     recordNewVoice: "नई आवाज रिकॉर्ड करें",
-    voiceLanguageSelector: "बोलने की भाषा:"
+    voiceLanguageSelector: "बोलने की भाषा:",
+    lockerTitle: "डिजिटल हेल्थ लॉकर",
+    lockerSubtitle: "चिकित्सा रिपोर्ट एवं ओसीआर रिकॉर्ड्स",
+    lockerDesc: "चिकित्सक की समीक्षा हेतु स्वचालित रूप से निकाले गए संरचित प्रयोगशाला मापदंड।",
+    availableDocuments: "उपलब्ध दस्तावेज़",
+    viewDocument: "दस्तावेज़ देखें",
+    downloadPdf: "पीडीएफ डाउनलोड करें",
+    ocrExtractedData: "ओसीआर द्वारा निकाली गई प्रयोगशाला डेटा",
+    historyTitle: "ट्राइएज मूल्यांकन इतिहास",
+    historySubtitle: "पूर्व लक्षण मूल्यांकन एवं चिकित्सकीय समीक्षाएं",
+    timelinePageTitle: "कालानुक्रमिक स्वास्थ्य समयरेखा",
+    timelinePageSubtitle: "लक्षण प्रस्तुतीकरण, लैब रिपोर्ट एवं चिकित्सक समीक्षाओं का ऑडिट योग्य क्रम"
   },
   clinical: {
     workspaceTitle: "क्लिनिकल समीक्षा कार्यक्षेत्र",
@@ -252,7 +274,23 @@ export const hiTranslations = {
     aiTranslationNotice: "एआई-सहायता प्राप्त अनुवाद — नैदानिक निष्कर्ष से पहले मूल रोगी इनपुट की समीक्षा अवश्य करें।",
     completeClinicalReviewModalTitle: "नैदानिक समीक्षा पूर्ण करें",
     completeClinicalReviewModalDesc: "अपना नैदानिक ट्राइएज नोट दर्ज करें। यह कार्रवाई प्रमाणित करती है कि एक योग्य स्वास्थ्य कार्यकर्ता ने मल्टीमॉडल इनपुट की समीक्षा की है।",
-    confirmReviewCompleteBtn: "समीक्षा पूर्ण होने की पुष्टि करें"
+    confirmReviewCompleteBtn: "समीक्षा पूर्ण होने की पुष्टि करें",
+    doctorLanguageProfileTitle: "चिकित्सक भाषा प्रोफ़ाइल",
+    doctorLanguageProfileSubtitle: "क्लिनिकल वर्कस्पेस भाषा को रोगी संचार भाषा से अलग रखें",
+    interfaceLanguageLabel: "इंटरफ़ेस भाषा (वर्कस्पेस)",
+    patientCommLanguageLabel: "रोगी संचार भाषा",
+    savePreferences: "प्राथमिकताएं सहेजें",
+    queueFilterAll: "सभी",
+    queueFilterHigh: "उच्च प्राथमिकता",
+    queueFilterWaiting: "प्रतीक्षारत",
+    queueFilterReviewed: "समीक्षित",
+    queueFilterReferral: "रेफरल",
+    savedViewActive: "सभी सक्रिय",
+    savedViewPriority: "प्राथमिकता शिफ्ट",
+    savedViewUnreviewed: "असमीक्षित लैब डेटा",
+    sortByWaitTime: "प्रतीक्षा समय",
+    sortByUrgency: "तात्कालिकता",
+    sortByAge: "आयु"
   },
   consent: {
     pageTitle: "सहमति एवं पहुँच नियंत्रण",
@@ -316,6 +354,18 @@ export const hiTranslations = {
     colAction: "कार्रवाई एवं परिचालन घटना",
     colCase: "मामला संदर्भ",
     colHash: "हैश मोहर"
+  },
+  assessment: {
+    start: "आकलन शुरू करें",
+    recordVoice: "आवाज़ रिकॉर्ड करें",
+    symptoms: "लक्षण",
+    continue: "आगे बढ़ें",
+    uploadReport: "जांच रिपोर्ट अपलोड करें",
+    previous: "पीछे",
+    reviewSubmission: "जानकारी की समीक्षा करें",
+    duration: "अवधि",
+    submit: "समीक्षा के लिए जमा करें",
+    assessmentSubmitted: "आकलन सफलतापूर्वक जमा किया गया"
   },
   errors: {
     requiredField: "यह फ़ील्ड आवश्यक है।",

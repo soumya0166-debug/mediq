@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Clock, 
   CheckCircle2, 
@@ -19,6 +20,7 @@ import { RiskBadge } from '../common/RiskBadge';
 
 export const PatientHistoryPage: React.FC = () => {
   const { currentPatient, assessments, markQuestionAnswered, navigate, setSelectedAssessmentId } = useApp();
+  const { t } = useLanguage();
 
   const patientAssessments = assessments.filter(a => a.patientId === currentPatient?.id) || [];
   const activeAssessment = patientAssessments[0] || assessments[0];
@@ -39,13 +41,13 @@ export const PatientHistoryPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1 rounded-md">
-            Patient Portal
+            {t('auth.patientRoleTitle')}
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
-            Assessments & Review Status
+            {t('patient.historyTitle')}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Track real-time clinical review stage, answer healthcare worker inquiries, and view continuity notes.
+            {t('patient.historySubtitle')}
           </p>
         </div>
 
@@ -53,7 +55,7 @@ export const PatientHistoryPage: React.FC = () => {
           onClick={() => navigate('/patient/new-assessment')}
           className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <span>+ Start New Assessment</span>
+          <span>+ {t('patient.startAssessmentBtn')}</span>
         </button>
       </div>
 

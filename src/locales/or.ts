@@ -41,7 +41,18 @@ export const orTranslations = {
     status: "ସ୍ଥିତି",
     action: "କାର୍ଯ୍ୟ",
     all: "ସମସ୍ତ",
-    active: "ସକ୍ରିୟ"
+    active: "ସକ୍ରିୟ",
+    emergencyTitle: "ଜୀବନ-ସଙ୍କଟାପନ୍ନ ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତି",
+    emergencyDesc: "ତୀବ୍ର ଛାତି ଯନ୍ତ୍ରଣା, ଶ୍ୱାସକ୍ରିୟାରେ ଗୁରୁତର କଷ୍ଟ କିମ୍ବା ଆଘାତ ପାଇଁ, ଡିଜିଟାଲ୍ ପ୍ରକ୍ରିୟା ଛାଡ଼ି ସିଧାସଳଖ ଜରୁରୀକାଳୀନ ନମ୍ବର ଡାଏଲ୍ କରନ୍ତୁ:",
+    emergencyAmbulance: "୧୦୮ (ଆମ୍ବୁଲାନ୍ସ)",
+    emergencyNational: "୧୧୨ (ଜାତୀୟ ଜରୁରୀକାଳୀନ)",
+    footerPlatformExperiences: "ପ୍ଲାଟଫର୍ମ ଅନୁଭୂତି",
+    footerGovernanceAudit: "ପରିଚାଳନା ଓ ଅଡିଟ୍",
+    footerEmergencyNotice: "ଜରୁରୀକାଳୀନ ଟ୍ରାଏଜ୍ ସୂଚନା",
+    footerCopyright: "CAREQ © ୨୦୨୬ — ସଂଯୁକ୍ତ ସ୍ୱାସ୍ଥ୍ୟସେବା ବ୍ୟବସ୍ଥା।",
+    footerConsentPolicy: "ସମ୍ମତି ନୀତି",
+    footerDataGovernance: "ତଥ୍ୟ ପରିଚାଳନା",
+    footerDemoCredentials: "ଡେମୋ ପ୍ରମାଣପତ୍ର"
   },
   nav: {
     dashboard: "ଡ୍ୟାସବୋର୍ଡ",
@@ -161,7 +172,18 @@ export const orTranslations = {
     stopRecordingBtn: "ରେକର୍ଡିଂ ବନ୍ଦ କରନ୍ତୁ",
     submitResponseBtn: "ଉତ୍ତର ଜମା କରନ୍ତୁ",
     recordNewVoice: "ନୂତନ ଭଏସ୍ ରେକର୍ଡ କରନ୍ତୁ",
-    voiceLanguageSelector: "କହିବା ଭାଷା:"
+    voiceLanguageSelector: "କହିବା ଭାଷା:",
+    lockerTitle: "ଡିଜିଟାଲ୍ ସ୍ୱାସ୍ଥ୍ୟ ଲକର୍",
+    lockerSubtitle: "ଡାକ୍ତରୀ ରିପୋର୍ଟ ଏବଂ ଓସିଆର୍ ରେକର୍ଡ",
+    lockerDesc: "ଡାକ୍ତରୀ ସମୀକ୍ଷା ପାଇଁ ସ୍ୱୟଂଚାଳିତ ଭାବରେ ପ୍ରସ୍ତୁତ ପରୀକ୍ଷାଗାର ତଥ୍ୟ।",
+    availableDocuments: "ଉପଲବ୍ଧ ଦଲିଲ୍",
+    viewDocument: "ଦଲିଲ୍ ଦେଖନ୍ତୁ",
+    downloadPdf: "ପିଡିଏଫ୍ ଡାଉନଲୋଡ୍ କରନ୍ତୁ",
+    ocrExtractedData: "ଓସିଆର୍ ସଂଗୃହୀତ ଲାବୋରେଟୋରୀ ତଥ୍ୟ",
+    historyTitle: "ଟ୍ରାଏଜ୍ ମୂଲ୍ୟାଙ୍କନ ଇତିହାସ",
+    historySubtitle: "ପୂର୍ବ ଲକ୍ଷଣ ମୂଲ୍ୟାଙ୍କନ ଏବଂ ଡାକ୍ତରୀ ସମୀକ୍ଷା",
+    timelinePageTitle: "କ୍ରମାନୁସାରୀ ସ୍ୱାସ୍ଥ୍ୟ ସମୟରେଖା",
+    timelinePageSubtitle: "ଲକ୍ଷଣ ଦାଖଲ, ଲ୍ୟାବ୍ ସଂଲଗ୍ନ ଏବଂ ଡାକ୍ତରୀ ସମୀକ୍ଷାର ଅଡିଟ୍ ଯୋଗ୍ୟ କ୍ରମ"
   },
   clinical: {
     workspaceTitle: "କ୍ଲିନିକାଲ୍ ସମୀକ୍ଷା କାର୍ଯ୍ୟସ୍ଥଳୀ",
@@ -252,7 +274,23 @@ export const orTranslations = {
     aiTranslationNotice: "AI-ସହାୟକ ଅନୁବାଦ — ଡାକ୍ତରୀ ନିର୍ଣ୍ଣୟ ପୂର୍ବରୁ ମୂଳ ରୋଗୀଙ୍କ ବକ୍ତବ୍ୟ ଯାଞ୍ଚ କରନ୍ତୁ।",
     completeClinicalReviewModalTitle: "କ୍ଲିନିକାଲ୍ ସମୀକ୍ଷା ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ",
     completeClinicalReviewModalDesc: "ଆପଣଙ୍କ କ୍ଲିନିକାଲ୍ ଟ୍ରାଏଜ୍ ଟିପ୍ପଣୀ ଲେଖନ୍ତୁ। ଏହି କାର୍ଯ୍ୟ ନିଶ୍ଚିତ କରେ ଯେ ଜଣେ ଯୋଗ୍ୟ ସ୍ୱାସ୍ଥ୍ୟକର୍ମୀ ମଲ୍ଟିମୋଡାଲ୍ ତଥ୍ୟ ସମୀକ୍ଷା କରିଛନ୍ତି।",
-    confirmReviewCompleteBtn: "ସମୀକ୍ଷା ସମ୍ପୂର୍ଣ୍ଣ ନିଶ୍ଚିତ କରନ୍ତୁ"
+    confirmReviewCompleteBtn: "ସମୀକ୍ଷା ସମ୍ପୂର୍ଣ୍ଣ ନିଶ୍ଚିତ କରନ୍ତୁ",
+    doctorLanguageProfileTitle: "ଡାକ୍ତରୀ ଭାଷା ପ୍ରୋଫାଇଲ୍",
+    doctorLanguageProfileSubtitle: "କ୍ଲିନିକାଲ୍ କାର୍ଯ୍ୟକ୍ଷେତ୍ର ଭାଷାକୁ ରୋଗୀ ଯୋଗାଯୋଗ ଭାଷାଠାରୁ ପୃଥକ ରଖନ୍ତୁ",
+    interfaceLanguageLabel: "ଇଣ୍ଟରଫେସ୍ ଭାଷା (କାର୍ଯ୍ୟକ୍ଷେତ୍ର)",
+    patientCommLanguageLabel: "ରୋଗୀ ଯୋଗାଯୋଗ ଭାଷା",
+    savePreferences: "ପସନ୍ଦ ସାଇତନ୍ତୁ",
+    queueFilterAll: "ସମସ୍ତ",
+    queueFilterHigh: "ଉଚ୍ଚ ପ୍ରାଥମିକତା",
+    queueFilterWaiting: "ଅପେକ୍ଷାରତ",
+    queueFilterReviewed: "ସମୀକ୍ଷିତ",
+    queueFilterReferral: "ରେଫରାଲ୍",
+    savedViewActive: "ସମସ୍ତ ସକ୍ରିୟ",
+    savedViewPriority: "ପ୍ରାଥମିକତା ଶିଫ୍ଟ",
+    savedViewUnreviewed: "ଅସମୀକ୍ଷିତ ଲ୍ୟାବ୍ ତଥ୍ୟ",
+    sortByWaitTime: "ଅପେକ୍ଷା ସମୟ",
+    sortByUrgency: "ଜରୁରୀତା",
+    sortByAge: "ବୟସ"
   },
   consent: {
     pageTitle: "ସମ୍ମତି ଏବଂ ପ୍ରବେଶ ନିୟନ୍ତ୍ରଣ",
@@ -316,6 +354,18 @@ export const orTranslations = {
     colAction: "କାର୍ଯ୍ୟ ଏବଂ ପରିଚାଳନା ଘଟଣା",
     colCase: "ମାମଲା",
     colHash: "ହାସ୍ ମୋହର"
+  },
+  assessment: {
+    start: "ମୂଲ୍ୟାଙ୍କନ ଆରମ୍ଭ କରନ୍ତୁ",
+    recordVoice: "ଭଏସ୍ ରେକର୍ଡ କରନ୍ତୁ",
+    symptoms: "ଲକ୍ଷଣ",
+    continue: "ଆଗକୁ ବଢ଼ନ୍ତୁ",
+    uploadReport: "ଡାଇଗ୍ନୋଷ୍ଟିକ୍ ରିପୋର୍ଟ ଅପଲୋଡ୍ କରନ୍ତୁ",
+    previous: "ପଛକୁ",
+    reviewSubmission: "ତଥ୍ୟ ସମୀକ୍ଷା କରନ୍ତୁ",
+    duration: "ଅବଧି",
+    submit: "ସମୀକ୍ଷା ପାଇଁ ଦାଖଲ କରନ୍ତୁ",
+    assessmentSubmitted: "ମୂଲ୍ୟାଙ୍କନ ସଫଳତାର ସହିତ ଦାଖଲ ହୋଇଛି"
   },
   errors: {
     requiredField: "ଏହି ଫିଲ୍ଡଟି ଆବଶ୍ୟକ।",

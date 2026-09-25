@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { DoctorUser } from '../../types';
 import { 
   Stethoscope, 
@@ -15,6 +16,7 @@ import {
 
 export const DoctorRegisterPage: React.FC = () => {
   const { navigate, loginAsDoctor, addAuditEvent } = useApp();
+  const { t } = useLanguage();
 
   // Multi-step: Step 1 Professional Details, Step 2 Professional Verification (Section 15 Spec)
   const [step, setStep] = useState<1 | 2>(1);
@@ -63,13 +65,13 @@ export const DoctorRegisterPage: React.FC = () => {
       {/* Header */}
       <div className="text-center space-y-1">
         <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded">
-          Professional Accreditation
+          {t('auth.clinicalRoleTitle')}
         </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0A1E3F] tracking-tight">
-          Register as Healthcare Professional
+          {t('auth.registerDoctor')}
         </h1>
         <p className="text-xs sm:text-sm text-slate-500">
-          Access the CAREQ clinical review workspace and manage triage workflows
+          {t('auth.clinicalSubtitle')}
         </p>
       </div>
 
@@ -77,8 +79,8 @@ export const DoctorRegisterPage: React.FC = () => {
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
         <div className="grid grid-cols-2 gap-3 text-center text-xs">
           {[
-            { num: '01', title: 'Professional Details' },
-            { num: '02', title: 'Professional Verification' },
+            { num: '01', title: t('auth.professionalDetailsTitle') },
+            { num: '02', title: t('auth.professionalVerifyTitle') },
           ].map((item, idx) => {
             const stepNum = (idx + 1) as 1 | 2;
             const isActive = step === stepNum;
@@ -122,16 +124,16 @@ export const DoctorRegisterPage: React.FC = () => {
           <div className="space-y-4 text-xs animate-in fade-in">
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-lg font-bold text-slate-900">
-                Step 1 — Professional Details
+                {t('auth.professionalDetailsSubtitle')}
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Provide your clinical role and institutional jurisdiction.
+                {t('clinical.workspaceSubtitle')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Full Name *</label>
+                <label className="block font-bold text-slate-700 mb-1">{t('auth.fullName')} *</label>
                 <input
                   type="text"
                   value={fullName}
@@ -142,21 +144,21 @@ export const DoctorRegisterPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Professional Role *</label>
+                <label className="block font-bold text-slate-700 mb-1">{t('auth.professionalRole')} *</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium"
                 >
-                  <option value="Medical Officer">Medical Officer</option>
-                  <option value="Doctor">Doctor / Specialist</option>
+                  <option value="Medical Officer">{t('auth.medicalOfficerRole')}</option>
+                  <option value="Doctor">{t('auth.clinicalRoleTitle')}</option>
                   <option value="Nurse">Community Health Officer / Nurse</option>
                   <option value="Clinical Reviewer">Clinical Reviewer</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Facility *</label>
+                <label className="block font-bold text-slate-700 mb-1">{t('auth.facilityLabel')} *</label>
                 <input
                   type="text"
                   value={facility}
@@ -166,7 +168,7 @@ export const DoctorRegisterPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Department *</label>
+                <label className="block font-bold text-slate-700 mb-1">{t('auth.departmentLabel')} *</label>
                 <input
                   type="text"
                   value={department}
@@ -176,7 +178,7 @@ export const DoctorRegisterPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Mobile *</label>
+                <label className="block font-bold text-slate-700 mb-1">{t('auth.mobileNumber')} *</label>
                 <input
                   type="text"
                   value={mobile}
@@ -186,7 +188,7 @@ export const DoctorRegisterPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Email *</label>
+                <label className="block font-bold text-slate-700 mb-1">{t('auth.emailAddress')} *</label>
                 <input
                   type="email"
                   value={email}
@@ -202,7 +204,7 @@ export const DoctorRegisterPage: React.FC = () => {
                 onClick={() => navigate('/login')}
                 className="text-xs text-slate-500 hover:text-slate-800"
               >
-                Back to Login
+                {t('common.back')}
               </button>
 
               <button
@@ -210,7 +212,7 @@ export const DoctorRegisterPage: React.FC = () => {
                 onClick={() => setStep(2)}
                 className="px-6 py-2.5 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg font-bold text-xs shadow-xs transition-all flex items-center gap-1.5"
               >
-                <span>Continue to Professional Verification</span>
+                <span>{t('auth.verifyProfessionalBtn')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -222,17 +224,17 @@ export const DoctorRegisterPage: React.FC = () => {
           <div className="space-y-4 text-xs animate-in fade-in">
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-lg font-bold text-slate-900">
-                Step 2 — Professional Verification
+                {t('auth.professionalVerifySubtitle')}
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Simulate credential verification with the State Medical Council.
+                {t('common.educationalDisclaimer')}
               </p>
             </div>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Professional Registration ID *</label>
+                  <label className="block font-bold text-slate-700 mb-1">{t('auth.professionalId')} *</label>
                   <input
                     type="text"
                     value={regId}
@@ -243,7 +245,7 @@ export const DoctorRegisterPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">State *</label>
+                  <label className="block font-bold text-slate-700 mb-1">{t('auth.stateLabel')} *</label>
                   <select
                     value={state}
                     onChange={(e) => setState(e.target.value)}
@@ -255,7 +257,7 @@ export const DoctorRegisterPage: React.FC = () => {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Facility *</label>
+                  <label className="block font-bold text-slate-700 mb-1">{t('auth.facilityLabel')} *</label>
                   <input
                     type="text"
                     value={facility}
@@ -273,20 +275,20 @@ export const DoctorRegisterPage: React.FC = () => {
                   className="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-bold text-xs shadow-xs transition-all flex items-center gap-2"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  <span>{isVerifying ? 'Validating Credentials...' : 'Verify Professional Identity'}</span>
+                  <span>{isVerifying ? t('common.loading') : t('auth.verifyProfessionalBtn')}</span>
                 </button>
               ) : (
                 /* Verification Success State (Section 15 Spec) */
                 <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-300 space-y-1.5 animate-in fade-in">
                   <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-sm">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block animate-pulse" />
-                    <span>Professional Identity Verified</span>
+                    <span>{t('auth.professionalVerifiedBadge')}</span>
                   </div>
                   <div className="text-xs text-slate-800">
-                    <strong>{fullName}</strong> • Role: <span className="font-semibold text-teal-800">{role}</span>
+                    <strong>{fullName}</strong> • {t('clinical.role')}: <span className="font-semibold text-teal-800">{role}</span>
                   </div>
                   <span className="inline-block text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 mt-1">
-                    Verified — Demo
+                    {t('common.verified')} — {t('common.demoVerification')}
                   </span>
                 </div>
               )}
@@ -298,7 +300,7 @@ export const DoctorRegisterPage: React.FC = () => {
                 onClick={() => setStep(1)}
                 className="text-xs text-slate-500 hover:text-slate-800"
               >
-                ← Back
+                ← {t('common.back')}
               </button>
 
               <button
@@ -312,7 +314,7 @@ export const DoctorRegisterPage: React.FC = () => {
                 }`}
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>Complete Professional Registration</span>
+                <span>{t('auth.registerDoctor')}</span>
               </button>
             </div>
           </div>

@@ -4,6 +4,8 @@ import { SupportedLocale, SUPPORTED_LOCALES, TRANSLATIONS, LocaleMetadata } from
 interface LanguageContextType {
   locale: SupportedLocale;
   setLocale: (locale: SupportedLocale) => void;
+  patientCommLocale: SupportedLocale;
+  setPatientCommLocale: (locale: SupportedLocale) => void;
   t: (path: string, fallback?: string) => string;
   locales: LocaleMetadata[];
   currentLocaleMetadata: LocaleMetadata;
@@ -25,6 +27,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 'en-IN';
   });
 
+  const [patientCommLocale, setPatientCommLocaleState] = useState<SupportedLocale>(() => {
+    const saved = localStorage.getItem('careq_patient_comm_locale');
+    if (saved === 'en-IN' || saved === 'hi-IN' || saved === 'or-IN') {
+      return saved as SupportedLocale;
+    }
+    return 'or-IN';
+  });
+
   const [isFirstVisitPromptOpen, setFirstVisitPromptOpen] = useState<boolean>(() => {
     const hasVisited = localStorage.getItem('careq_has_chosen_language');
     return !hasVisited;
@@ -39,6 +49,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const htmlLang = newLocale === 'hi-IN' ? 'hi' : newLocale === 'or-IN' ? 'or' : 'en';
     document.documentElement.lang = htmlLang;
     document.documentElement.dir = 'ltr';
+  }, []);
+
+  const setPatientCommLocale = useCallback((newLocale: SupportedLocale) => {
+    setPatientCommLocaleState(newLocale);
+    localStorage.setItem('careq_patient_comm_locale', newLocale);
   }, []);
 
   const dismissFirstVisitPrompt = useCallback(() => {
@@ -123,6 +138,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         locale,
         setLocale,
+        patientCommLocale,
+        setPatientCommLocale,
         t,
         locales: SUPPORTED_LOCALES,
         currentLocaleMetadata,

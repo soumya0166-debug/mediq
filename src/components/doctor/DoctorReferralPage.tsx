@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { ReferralDraft } from '../../types';
 import { 
   Share2, 
@@ -20,6 +21,7 @@ import {
 
 export const DoctorReferralPage: React.FC = () => {
   const { selectedAssessment, currentDoctor, currentFacility, facilityId, navigate, saveReferralNote } = useApp();
+  const { t } = useLanguage();
   const assessment = selectedAssessment;
 
   const [copied, setCopied] = useState(false);
@@ -160,10 +162,10 @@ STATUS: ${referralStatus}
           </button>
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-              Referral Draft (Section 36)
+              {t('referral.pageTitle')}
             </h1>
             <p className="text-xs text-slate-500">
-              Inter-facility continuity note prepared for specialist and tertiary consultation.
+              {t('referral.pageSubtitle')}
             </p>
           </div>
         </div>
@@ -174,7 +176,7 @@ STATUS: ${referralStatus}
             className="px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied' : 'Copy Text'}</span>
+            <span>{copied ? t('referral.copiedBadge') : t('referral.copyTextBtn')}</span>
           </button>
 
           <button
@@ -182,7 +184,7 @@ STATUS: ${referralStatus}
             className="px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Print</span>
+            <span>{t('referral.printBtn')}</span>
           </button>
         </div>
       </div>
@@ -197,37 +199,36 @@ STATUS: ${referralStatus}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-teal-800">
-                CAREQ • National Digital Health Network
+                {t('common.brandName')} • {t('common.tagline')}
               </div>
               <h2 className="text-2xl font-black text-slate-950 tracking-tight">
-                Clinical Referral Form
+                {t('referral.clinicalReferralForm')}
               </h2>
             </div>
 
             {/* Status (Section 36 Spec) */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500">Status:</span>
+              <span className="text-xs font-bold text-slate-500">{t('common.status')}:</span>
               <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
                 referralStatus === 'Approved' 
                   ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                   : 'bg-amber-100 text-amber-900 border border-amber-300'
               }`}>
-                {referralStatus}
+                {referralStatus === 'Approved' ? t('referral.statusApproved') : t('referral.statusDraft')}
               </span>
             </div>
           </div>
 
           <div className="text-[11px] text-slate-500 flex flex-wrap gap-4 pt-1 font-mono">
             <span>Case Ref: {assessment.id}</span>
-            <span>Date: {new Date().toLocaleDateString()}</span>
-            <span>Origin Facility: {currentFacility || 'CAREQ Demo Primary Health Centre'}</span>
+            <span>{t('clinical.currentFacility')}: {currentFacility || 'CAREQ Demo Primary Health Centre'}</span>
           </div>
         </div>
 
         {/* Section 1: Patient Information */}
         <div className="space-y-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            1. Patient Information
+            {t('referral.secPatientInfo')}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-slate-50 p-3.5 rounded-lg border border-slate-200">
             <div>
@@ -252,7 +253,7 @@ STATUS: ${referralStatus}
         {/* Section 2: Presenting Concerns */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            2. Presenting Concerns
+            {t('referral.secPresentingConcerns')}
           </h3>
           {isEditing ? (
             <textarea
@@ -269,7 +270,7 @@ STATUS: ${referralStatus}
         {/* Section 3: Timeline */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            3. Chronological Timeline
+            {t('referral.secTimeline')}
           </h3>
           {isEditing ? (
             <textarea
@@ -286,7 +287,7 @@ STATUS: ${referralStatus}
         {/* Section 4: Relevant Reports */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            4. Relevant Reports (OCR Extracted)
+            {t('referral.secRelevantReports')}
           </h3>
           {isEditing ? (
             <textarea
@@ -305,7 +306,7 @@ STATUS: ${referralStatus}
         {/* Section 5: Urgency Signals */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            5. Urgency Signals
+            {t('referral.secUrgencySignals')}
           </h3>
           {isEditing ? (
             <textarea
@@ -324,7 +325,7 @@ STATUS: ${referralStatus}
         {/* Section 6: Information Missing */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            6. Information Missing
+            {t('referral.secInformationMissing')}
           </h3>
           {isEditing ? (
             <textarea
@@ -341,7 +342,7 @@ STATUS: ${referralStatus}
         {/* Section 7: Healthcare Worker Notes */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            7. Healthcare Worker Notes
+            {t('referral.secClinicianNotes')}
           </h3>
           {isEditing ? (
             <textarea
@@ -358,7 +359,7 @@ STATUS: ${referralStatus}
         {/* Section 8: Referral Reason */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            8. Referral Reason
+            {t('referral.secReferralReason')}
           </h3>
           {isEditing ? (
             <textarea
@@ -377,7 +378,7 @@ STATUS: ${referralStatus}
         {/* Section 9: Receiving Facility */}
         <div className="space-y-1.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-            9. Receiving Facility & Priority
+            {t('referral.secReceivingFacility')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             {isEditing ? (
@@ -422,7 +423,7 @@ STATUS: ${referralStatus}
         {/* Attestation & Disclaimer */}
         <div className="pt-4 border-t-2 border-slate-200 text-[11px] text-slate-500 space-y-1">
           <p>
-            <strong>Advisory Prototype Notice:</strong> Prepared via CAREQ triage assistant. Advisory information verified and attested by licensed medical officer prior to inter-facility dispatch.
+            <strong>{t('common.educationalDisclaimer')}:</strong> {t('clinical.clinicalOversightMandate')}
           </p>
         </div>
 
@@ -437,7 +438,7 @@ STATUS: ${referralStatus}
               className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>Save Draft</span>
+              <span>{t('referral.saveDraftBtn')}</span>
             </button>
           ) : (
             <button
@@ -445,7 +446,7 @@ STATUS: ${referralStatus}
               className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs"
             >
               <Edit3 className="w-3.5 h-3.5 text-slate-600" />
-              <span>Edit</span>
+              <span>{t('referral.editBtn')}</span>
             </button>
           )}
 
@@ -453,7 +454,7 @@ STATUS: ${referralStatus}
             onClick={handleSaveDraft}
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold transition-all"
           >
-            Save Draft
+            {t('referral.saveDraftBtn')}
           </button>
 
           <button
@@ -461,7 +462,7 @@ STATUS: ${referralStatus}
             className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Approve Referral</span>
+            <span>{t('referral.approveReferralBtn')}</span>
           </button>
 
         </div>

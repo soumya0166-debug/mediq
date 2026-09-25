@@ -24,7 +24,10 @@ import {
   HelpCircle, 
   Shield, 
   ArrowRightLeft, 
-  ChevronDown 
+  ChevronDown,
+  Globe,
+  Languages,
+  X
 } from 'lucide-react';
 
 export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,9 +43,17 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
     switchFacility, 
     availableFacilities 
   } = useApp();
-  const { t } = useLanguage();
+  const { 
+    t, 
+    locale, 
+    setLocale, 
+    patientCommLocale, 
+    setPatientCommLocale, 
+    locales 
+  } = useLanguage();
 
   const [facilityDropdownOpen, setFacilityDropdownOpen] = useState(false);
+  const [showLangProfileModal, setShowLangProfileModal] = useState(false);
 
   const highPriorityCount = assessments.filter(a => a.riskLevel === 'HIGH' && a.status === 'WAITING_REVIEW').length;
   const waitingCount = assessments.filter(a => a.status === 'WAITING_REVIEW').length;
@@ -84,6 +95,23 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
             {/* Quick Accessible Language Selector in Clinical Workspace (Section 3 Spec) */}
             <div className="pt-1">
               <LanguageSelector variant="compact" />
+            </div>
+
+            {/* Clinician Language Profile Trigger (Section 34 Spec) */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLangProfileModal(true)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-teal-300 hover:text-white bg-teal-950/40 hover:bg-teal-900/60 border border-teal-800/50 transition-all"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Languages className="w-3.5 h-3.5 text-teal-400" />
+                  <span>{t('clinical.doctorLanguageProfileTitle')}</span>
+                </div>
+                <span className="text-[9px] uppercase font-mono px-1 py-0.2 rounded bg-teal-900/60 text-teal-300 border border-teal-700/50">
+                  {patientCommLocale.split('-')[0]}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -366,6 +394,140 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
+
+      {/* Clinician Language Profile Modal (Section 34 Spec) */}
+      {showLangProfileModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="bg-[#0A1E3F] text-white p-5 flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300 flex-shrink-0 mt-0.5">
+                  <Languages className="w-5 h-5 text-teal-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white tracking-tight">
+                    {t('clinical.doctorLanguageProfileTitle')}
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 leading-snug">
+                    {t('clinical.doctorLanguageProfileSubtitle')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLangProfileModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Option 1: Workspace Interface Language */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                    {t('clinical.interfaceLanguageLabel')}
+                  </label>
+                  <span className="text-[11px] font-mono text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    Active: {locale}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {locales.map((loc) => {
+                    const isSelected = locale === loc.id;
+                    return (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setLocale(loc.id)}
+                        className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
+                          isSelected
+                            ? 'bg-teal-50 border-teal-600 text-teal-900 shadow-2xs font-bold'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="text-sm font-bold">{loc.nativeName}</span>
+                        <span className="text-[10px] text-slate-500 font-normal">{loc.name}</span>
+                        {isSelected && (
+                          <span className="text-[10px] text-teal-700 font-semibold mt-0.5">✓ Active</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Option 2: Patient Communication Language */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                    {t('clinical.patientCommLanguageLabel')}
+                  </label>
+                  <span className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    Default: {patientCommLocale}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Patient questions, triage follow-ups, and regional guidance will default to this language.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {locales.map((loc) => {
+                    const isSelected = patientCommLocale === loc.id;
+                    return (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setPatientCommLocale(loc.id)}
+                        className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-2xs font-bold'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="text-sm font-bold">{loc.nativeName}</span>
+                        <span className="text-[10px] text-slate-500 font-normal">{loc.name}</span>
+                        {isSelected && (
+                          <span className="text-[10px] text-blue-700 font-semibold mt-0.5">✓ Selected</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Governance & Privacy attestation */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <p>
+                  Language preferences are encrypted and synchronized with your clinical practitioner credentials.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLangProfileModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLangProfileModal(false)}
+                className="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{t('clinical.savePreferences')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

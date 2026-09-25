@@ -98,13 +98,13 @@ export const PatientDashboard: React.FC = () => {
             </div>
             <div className="space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
-                {t('patient.requestAttention', 'Healthcare Worker Request')}
+                {t('patient.doctorRequestTitle')}
               </span>
               <h3 className="font-bold text-base text-slate-900 mt-1">
-                {t('patient.pendingDoctorQuestionTitle', 'Additional information is required to continue the review.')}
+                {t('patient.doctorRequestDesc')}
               </h3>
               <p className="text-xs text-slate-700 font-medium">
-                {t('patient.doctorQuestion', 'Question from Healthcare Professional')}:
+                {t('clinical.requestQuestionLabel')}:
               </p>
               <div className="p-3 bg-white rounded-lg border border-amber-200 text-slate-900 font-semibold text-xs mt-1">
                 "{pendingDoctorQuestion.question}"
@@ -120,7 +120,7 @@ export const PatientDashboard: React.FC = () => {
                 className="px-4 py-2 bg-[#0A1E3F] hover:bg-[#07152c] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>{t('patient.answerByText', 'Answer by Text')}</span>
+                <span>{t('patient.answerByTextBtn')}</span>
               </button>
 
               <button
@@ -128,7 +128,7 @@ export const PatientDashboard: React.FC = () => {
                 className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5"
               >
                 <Mic className="w-3.5 h-3.5" />
-                <span>{t('patient.answerByVoice', 'Answer by Voice')}</span>
+                <span>{t('patient.answerByVoiceBtn')}</span>
               </button>
             </div>
           )}
@@ -140,7 +140,7 @@ export const PatientDashboard: React.FC = () => {
                 rows={2}
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
-                placeholder="Type your response to the doctor here..."
+                placeholder={t('patient.typeYourAnswerPlaceholder')}
                 className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-hidden focus:ring-1 focus:ring-slate-400"
               />
               <div className="flex gap-2">
@@ -193,10 +193,10 @@ export const PatientDashboard: React.FC = () => {
           <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
           <div>
             <div className="font-bold text-sm text-emerald-900">
-              {t('common.success')}: {t('patient.followUpCompleted', 'Response Submitted')}
+              {t('common.success')}: {t('patient.responseSubmittedBadge')}
             </div>
             <p className="text-xs text-slate-600 mt-0.5">
-              {t('patient.responseTransmitted', 'Your response has been transmitted for clinical evaluation.')}
+              {t('patient.doctorRequestDesc')}
             </p>
           </div>
         </div>

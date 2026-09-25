@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   History, 
   ShieldCheck, 
@@ -19,6 +20,7 @@ import {
 
 export const DoctorAuditLogPage: React.FC = () => {
   const { auditLogs } = useApp();
+  const { t } = useLanguage();
   
   // Section 37 Filters: User, Action, Date, Case
   const [filterUser, setFilterUser] = useState<string>('All');
@@ -63,20 +65,20 @@ export const DoctorAuditLogPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1 rounded-md">
-            Governance & Compliance
+            {t('common.footerGovernanceAudit')}
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
-            Activity & Audit Trail (Section 37)
+            {t('audit.pageTitle')}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Immutable enterprise audit log recording all user access, AI extractions, clinician reviews, and data transmissions.
+            {t('audit.pageSubtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-emerald-800 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
             <Lock className="w-3.5 h-3.5 text-emerald-600" />
-            Audit Ledger Active (SHA-256)
+            {t('audit.ledgerActiveBadge')}
           </span>
         </div>
       </div>
@@ -91,7 +93,7 @@ export const DoctorAuditLogPage: React.FC = () => {
           {/* Filter 1: User */}
           <div>
             <label className="text-slate-500 block text-[11px] font-medium mb-1">
-              Filter User:
+              {t('audit.filterUser')}
             </label>
             <select
               value={filterUser}
@@ -99,7 +101,7 @@ export const DoctorAuditLogPage: React.FC = () => {
               className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 font-medium"
             >
               {usersList.map((u) => (
-                <option key={u} value={u}>{u}</option>
+                <option key={u} value={u}>{u === 'All' ? t('common.all') : u}</option>
               ))}
             </select>
           </div>
@@ -107,7 +109,7 @@ export const DoctorAuditLogPage: React.FC = () => {
           {/* Filter 2: Action */}
           <div>
             <label className="text-slate-500 block text-[11px] font-medium mb-1">
-              Filter Action:
+              {t('audit.filterAction')}
             </label>
             <select
               value={filterAction}
@@ -115,7 +117,7 @@ export const DoctorAuditLogPage: React.FC = () => {
               className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 font-medium"
             >
               {actionsList.map((a) => (
-                <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>
+                <option key={a} value={a}>{a === 'All' ? t('common.all') : a.replace(/_/g, ' ')}</option>
               ))}
             </select>
           </div>
@@ -123,7 +125,7 @@ export const DoctorAuditLogPage: React.FC = () => {
           {/* Filter 3: Date */}
           <div>
             <label className="text-slate-500 block text-[11px] font-medium mb-1">
-              Date Filter:
+              {t('audit.dateFilter')}
             </label>
             <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -134,7 +136,7 @@ export const DoctorAuditLogPage: React.FC = () => {
           {/* Filter 4: Case Search */}
           <div>
             <label className="text-slate-500 block text-[11px] font-medium mb-1">
-              Case Reference:
+              {t('audit.caseReference')}
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
@@ -160,7 +162,7 @@ export const DoctorAuditLogPage: React.FC = () => {
         <div className="p-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <History className="w-4 h-4 text-teal-700" />
-            Audit Ledger ({filteredLogs.length} Events)
+            {t('audit.pageTitle')} ({filteredLogs.length} Events)
           </h2>
           <span className="text-[10px] text-slate-400 font-mono">
             Cryptographic Integrity Verified
@@ -171,11 +173,11 @@ export const DoctorAuditLogPage: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200 font-semibold">
               <tr>
-                <th className="py-3 px-4 w-24">Time</th>
-                <th className="py-3 px-4 w-44">User / Actor</th>
-                <th className="py-3 px-4">Action & Operational Event</th>
-                <th className="py-3 px-4 w-36">Case Ref</th>
-                <th className="py-3 px-4 text-right w-32">Hash Stamp</th>
+                <th className="py-3 px-4 w-24">{t('audit.colTime')}</th>
+                <th className="py-3 px-4 w-44">{t('audit.colActor')}</th>
+                <th className="py-3 px-4">{t('audit.colAction')}</th>
+                <th className="py-3 px-4 w-36">{t('audit.colCase')}</th>
+                <th className="py-3 px-4 text-right w-32">{t('audit.colHash')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">

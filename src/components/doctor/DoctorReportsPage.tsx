@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { SAMPLE_REPORTS_LIBRARY } from '../../data/mockData';
 import { 
   FileCheck, 
@@ -16,6 +17,7 @@ import {
 
 export const DoctorReportsPage: React.FC = () => {
   const { assessments, navigate, setSelectedAssessmentId } = useApp();
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'All' | 'Hematology' | 'Radiology' | 'Biochemistry'>('All');
 
@@ -37,13 +39,13 @@ export const DoctorReportsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1 rounded-md">
-            Diagnostic Health Vault
+            {t('nav.reports')}
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
-            Lab & Radiology Reports Vault
+            {t('patient.lockerSubtitle')}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Multimodal clinical documents processed via OCR extraction pipeline for healthcare worker review.
+            {t('patient.lockerDesc')}
           </p>
         </div>
 

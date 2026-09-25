@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { MOCK_PATIENTS, MOCK_DOCTORS } from '../../data/mockData';
 import { 
   ShieldCheck, 
@@ -12,6 +13,7 @@ import {
 
 export const VerifyPage: React.FC = () => {
   const { navigate } = useApp();
+  const { t } = useLanguage();
   const [query, setQuery] = useState('PAT-2026-00124');
   const [searchResult, setSearchResult] = useState<any>(MOCK_PATIENTS[0]);
   const [searchedType, setSearchedType] = useState<'patient' | 'doctor'>('patient');

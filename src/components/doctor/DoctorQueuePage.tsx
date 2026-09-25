@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Search, 
   Filter, 
@@ -21,6 +22,7 @@ import { RiskBadge } from '../common/RiskBadge';
 
 export const DoctorQueuePage: React.FC = () => {
   const { assessments, navigate, setSelectedAssessmentId } = useApp();
+  const { t } = useLanguage();
   
   // URL search query check for initial filter
   const urlFilter = new URLSearchParams(window.location.search).get('filter');
@@ -80,13 +82,13 @@ export const DoctorQueuePage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1 rounded-md">
-            Clinical Triage Queue
+            {t('nav.queue')}
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
-            Patient Review Queue
+            {t('clinical.queueTitle')}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Multimodal clinical cases prioritized by AI triage support for qualified healthcare worker examination.
+            {t('clinical.queueSubtitle')}
           </p>
         </div>
 
@@ -108,11 +110,11 @@ export const DoctorQueuePage: React.FC = () => {
           {/* Filter Pills */}
           <div className="flex flex-wrap items-center gap-1.5">
             {[
-              { id: 'All', label: 'All Cases' },
-              { id: 'High', label: 'Priority Cases' },
-              { id: 'Waiting', label: 'Needs Review' },
-              { id: 'Reviewed', label: 'Reviewed' },
-              { id: 'Referral', label: 'Referred' },
+              { id: 'All', label: t('clinical.queueFilterAll') },
+              { id: 'High', label: t('clinical.queueFilterHigh') },
+              { id: 'Waiting', label: t('clinical.queueFilterWaiting') },
+              { id: 'Reviewed', label: t('clinical.queueFilterReviewed') },
+              { id: 'Referral', label: t('clinical.queueFilterReferral') },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -138,7 +140,7 @@ export const DoctorQueuePage: React.FC = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search patient, ID, or case..."
+              placeholder={t('clinical.searchPlaceholder')}
               className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-hidden font-sans"
             />
           </div>
@@ -155,17 +157,21 @@ export const DoctorQueuePage: React.FC = () => {
               Saved Views:
             </span>
             <div className="flex items-center gap-1.5">
-              {(['All Active', 'Priority Shift', 'Unreviewed Lab Data'] as const).map((view) => (
+              {[
+                { id: 'All Active', label: t('clinical.savedViewActive') },
+                { id: 'Priority Shift', label: t('clinical.savedViewPriority') },
+                { id: 'Unreviewed Lab Data', label: t('clinical.savedViewUnreviewed') },
+              ].map((view) => (
                 <button
-                  key={view}
-                  onClick={() => setSavedView(view)}
+                  key={view.id}
+                  onClick={() => setSavedView(view.id as any)}
                   className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
-                    savedView === view
+                    savedView === view.id
                       ? 'bg-teal-50 text-teal-800 border border-teal-200 font-bold'
                       : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  {view}
+                  {view.label}
                 </button>
               ))}
             </div>
@@ -175,16 +181,16 @@ export const DoctorQueuePage: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-medium flex items-center gap-1">
               <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-              Sort:
+              {t('common.sort')}:
             </span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
               className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 font-medium"
             >
-              <option value="WaitTime">Waiting Time (Longest)</option>
-              <option value="Urgency">Urgency Score</option>
-              <option value="Age">Patient Age</option>
+              <option value="WaitTime">{t('clinical.sortByWaitTime')}</option>
+              <option value="Urgency">{t('clinical.sortByUrgency')}</option>
+              <option value="Age">{t('clinical.sortByAge')}</option>
             </select>
           </div>
 
@@ -225,13 +231,13 @@ export const DoctorQueuePage: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200 font-semibold">
                 <tr>
-                  <th className="py-3.5 px-4">Patient ID</th>
-                  <th className="py-3.5 px-4">Patient / Age</th>
-                  <th className="py-3.5 px-4">Input Sources</th>
-                  <th className="py-3.5 px-4">Urgency Signal</th>
-                  <th className="py-3.5 px-4">Waiting</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Action</th>
+                  <th className="py-3.5 px-4">{t('patient.patientIdLabel')}</th>
+                  <th className="py-3.5 px-4">{t('clinical.colPatient')} / {t('clinical.colAge')}</th>
+                  <th className="py-3.5 px-4">{t('clinical.colInput')}</th>
+                  <th className="py-3.5 px-4">{t('clinical.colUrgency')}</th>
+                  <th className="py-3.5 px-4">{t('clinical.colWaiting')}</th>
+                  <th className="py-3.5 px-4">{t('clinical.colStatus')}</th>
+                  <th className="py-3.5 px-4 text-right">{t('clinical.colAction')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -247,7 +253,7 @@ export const DoctorQueuePage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-900">{a.patientName}</div>
                       <div className="text-[11px] text-slate-500">
-                        {a.patientAge} / {a.patientGender} • {a.patientLanguage}
+                        {a.patientAge} / {a.patientGender === 'Female' ? t('common.female') : a.patientGender === 'Male' ? t('common.male') : t('common.other')} • {a.patientLanguage}
                       </div>
                     </td>
 
@@ -255,21 +261,21 @@ export const DoctorQueuePage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
                         <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
-                          TEXT
+                          {t('clinical.typeText').toUpperCase()}
                         </span>
                         {a.hasVoice && (
                           <span className="px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 font-medium">
-                            VOICE
+                            {t('clinical.typeVoice').toUpperCase()}
                           </span>
                         )}
                         {a.hasReport && (
                           <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium">
-                            REPORT
+                            {t('nav.reports').toUpperCase()}
                           </span>
                         )}
                         {a.hasImage && (
                           <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
-                            IMAGE
+                            {t('clinical.tabImages').toUpperCase()}
                           </span>
                         )}
                       </div>
@@ -282,7 +288,7 @@ export const DoctorQueuePage: React.FC = () => {
 
                     {/* Waiting Time */}
                     <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
-                      {a.waitingMinutes} min
+                      {a.waitingMinutes} {t('common.minutes')}
                     </td>
 
                     {/* Status */}
@@ -292,7 +298,9 @@ export const DoctorQueuePage: React.FC = () => {
                         a.status === 'REFERRED' ? 'bg-indigo-50 text-indigo-800 border border-indigo-200' :
                         'bg-slate-100 text-slate-700'
                       }`}>
-                        {a.status === 'WAITING_REVIEW' ? 'Needs Review' : a.status}
+                        {a.status === 'WAITING_REVIEW' ? t('clinical.needsReviewStatus') : 
+                         a.status === 'REVIEWED' ? t('clinical.reviewedStatus') : 
+                         a.status === 'REFERRED' ? t('clinical.referredStatus') : a.status}
                       </span>
                     </td>
 
@@ -303,7 +311,7 @@ export const DoctorQueuePage: React.FC = () => {
                         className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-md text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Open</span>
+                        <span>{t('clinical.openBtn')}</span>
                       </button>
                     </td>
 
