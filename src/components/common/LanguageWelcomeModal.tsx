@@ -38,6 +38,8 @@ export const LanguageWelcomeModal: React.FC = () => {
             <p className="font-medium text-slate-700">You can change your language anytime.</p>
             <p className="font-medium text-slate-600">आप अपनी भाषा कभी भी बदल सकते हैं।</p>
             <p className="font-medium text-slate-600">ଆପଣ ଯେକୌଣସି ସମୟରେ ନିଜ ଭାଷା ପରିବର୍ତ୍ତନ କରିପାରିବେ।</p>
+            <p className="font-medium text-slate-600">আপনি যেকোনো সময় আপনার ভাষা পরিবর্তন করতে পারেন।</p>
+            <p className="font-medium text-slate-600">మీరు ఎప్పుడైనా మీ భాషను మార్చుకోవచ్చు.</p>
           </div>
         </div>
 

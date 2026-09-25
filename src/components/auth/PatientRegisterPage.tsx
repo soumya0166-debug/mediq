@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { SupportedLocale } from '../../locales';
 import { 
   ShieldCheck, 
   ArrowRight, 
@@ -30,7 +31,7 @@ export const PatientRegisterPage: React.FC = () => {
   const [gender, setGender] = useState<'Female' | 'Male' | 'Other'>('Female');
   const [mobileNumber, setMobileNumber] = useState('+91 98765 43210');
   const [email, setEmail] = useState('riya.das.demo@careq-health.org');
-  const [preferredLanguage, setPreferredLanguage] = useState<'en-IN' | 'hi-IN' | 'or-IN'>(locale);
+  const [preferredLanguage, setPreferredLanguage] = useState<SupportedLocale>(locale);
 
   // Step 2: Digital Health Identity (Section 7 Spec - Simulated Demo ID)
   const [demoHealthId, setDemoHealthId] = useState('XX-9482-1029-4821');

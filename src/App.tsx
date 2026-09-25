@@ -30,6 +30,9 @@ import { DoctorReferralPage } from './components/doctor/DoctorReferralPage';
 import { DoctorReportsPage } from './components/doctor/DoctorReportsPage';
 import { DoctorAuditLogPage } from './components/doctor/DoctorAuditLogPage';
 
+// Common Pages
+import { HealthcareAccessRestricted } from './components/common/HealthcareAccessRestricted';
+
 // Mobile navigation localized labels
 import { LayoutDashboard, ClipboardList, FileText, History, User } from 'lucide-react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -66,9 +69,12 @@ const AppContent: React.FC = () => {
     if (currentRoute === '/patient/profile') return <PatientProfilePage />;
     if (currentRoute === '/patient/timeline') return <PatientTimelinePage />;
     if (currentRoute === '/patient/consent') return <PatientConsentPage />;
-
     // Clinical / Healthcare Professional Routes (Nested in DoctorLayout)
     if (currentRoute.startsWith('/clinical') || currentRoute.startsWith('/doctor')) {
+      // Strict Access Restriction: Patients must NOT have access to healthcare dashboard
+      if (currentRole === 'patient') {
+        return <HealthcareAccessRestricted />;
+      }
       const renderDoctorContent = () => {
         if (currentRoute === '/clinical/dashboard' || currentRoute === '/doctor/dashboard') return <DoctorDashboard />;
         if (currentRoute.startsWith('/clinical/queue') || currentRoute.startsWith('/doctor/queue')) return <DoctorQueuePage />;

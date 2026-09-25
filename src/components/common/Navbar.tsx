@@ -152,15 +152,21 @@ export const Navbar: React.FC = () => {
                   <span>{t('auth.patientRoleTitle')}</span>
                 </button>
                 <button
-                  onClick={() => switchRole('doctor')}
+                  onClick={() => {
+                    if (currentRole === 'patient') {
+                      navigate('/doctor/dashboard');
+                    } else {
+                      switchRole('doctor');
+                    }
+                  }}
                   className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 font-bold ${
                     currentRole === 'doctor'
                       ? 'bg-[#0A1E3F] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
-                  title="Switch view to Healthcare Professional Experience"
+                  title={currentRole === 'patient' ? "Healthcare Professional Portal (Restricted to Practitioners)" : "Healthcare Professional Experience"}
                 >
-                  <Stethoscope className="w-3 h-3" />
+                  {currentRole === 'patient' ? <Lock className="w-3 h-3 text-amber-600" /> : <Stethoscope className="w-3 h-3" />}
                   <span>{t('auth.clinicalRoleTitle')}</span>
                 </button>
               </div>

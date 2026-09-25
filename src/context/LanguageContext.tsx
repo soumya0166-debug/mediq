@@ -21,7 +21,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [locale, setLocaleState] = useState<SupportedLocale>(() => {
     const saved = localStorage.getItem('careq_locale');
-    if (saved === 'en-IN' || saved === 'hi-IN' || saved === 'or-IN') {
+    if (saved && ['en-IN', 'hi-IN', 'or-IN', 'bn-IN', 'te-IN'].includes(saved)) {
       return saved as SupportedLocale;
     }
     return 'en-IN';
@@ -29,7 +29,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [patientCommLocale, setPatientCommLocaleState] = useState<SupportedLocale>(() => {
     const saved = localStorage.getItem('careq_patient_comm_locale');
-    if (saved === 'en-IN' || saved === 'hi-IN' || saved === 'or-IN') {
+    if (saved && ['en-IN', 'hi-IN', 'or-IN', 'bn-IN', 'te-IN'].includes(saved)) {
       return saved as SupportedLocale;
     }
     return 'or-IN';
@@ -46,7 +46,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('careq_has_chosen_language', 'true');
     
     // Update HTML attributes for accessibility and screen readers
-    const htmlLang = newLocale === 'hi-IN' ? 'hi' : newLocale === 'or-IN' ? 'or' : 'en';
+    const htmlLang = newLocale === 'hi-IN' ? 'hi' : newLocale === 'or-IN' ? 'or' : newLocale === 'bn-IN' ? 'bn' : newLocale === 'te-IN' ? 'te' : 'en';
     document.documentElement.lang = htmlLang;
     document.documentElement.dir = 'ltr';
   }, []);
@@ -126,22 +126,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const currentLocaleMetadata = SUPPORTED_LOCALES.find(l => l.id === locale) || SUPPORTED_LOCALES[0];
 
   const formatNumber = useCallback((n: number): string => {
-    if (locale === 'or-IN') {
-      // Localized Odia numerals if desired, or standard
-      return n.toLocaleString('or-IN');
-    }
-    if (locale === 'hi-IN') {
-      return n.toLocaleString('hi-IN');
-    }
-    return n.toLocaleString('en-IN');
+    return n.toLocaleString(locale);
   }, [locale]);
 
   const formatDate = useCallback((d: Date | string): string => {
     const dateObj = typeof d === 'string' ? new Date(d) : d;
     if (isNaN(dateObj.getTime())) return String(d);
     
-    const localeCode = locale === 'hi-IN' ? 'hi-IN' : locale === 'or-IN' ? 'or-IN' : 'en-IN';
-    return dateObj.toLocaleDateString(localeCode, {
+    return dateObj.toLocaleDateString(locale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
