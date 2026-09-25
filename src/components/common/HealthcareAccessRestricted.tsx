@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { ShieldAlert, ArrowLeft, Stethoscope, Lock, CheckCircle2 } from 'lucide-react';
 
 export const HealthcareAccessRestricted: React.FC = () => {
-  const { currentPatient, navigate, switchRole } = useApp();
+  const { currentPatient, navigate, currentSession, openWorkspaceSwitcher, logout } = useApp();
   const { t } = useLanguage();
 
   return (
@@ -58,9 +58,9 @@ export const HealthcareAccessRestricted: React.FC = () => {
               <span>{t('accessRestricted.returnDashboard', 'Return to Patient Dashboard')}</span>
             </button>
 
-            {useApp().currentSession?.verifiedRoles.includes('HEALTHCARE_PROFESSIONAL') ? (
+            {currentSession?.verifiedRoles.includes('HEALTHCARE_PROFESSIONAL') ? (
               <button
-                onClick={() => useApp().openWorkspaceSwitcher('HEALTHCARE_PROFESSIONAL')}
+                onClick={() => openWorkspaceSwitcher('HEALTHCARE_PROFESSIONAL')}
                 className="py-3 px-4 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-xs sm:text-sm rounded-xl transition-all border border-teal-300 flex items-center justify-center gap-2"
               >
                 <Stethoscope className="w-4 h-4 text-teal-700" />
@@ -77,7 +77,7 @@ export const HealthcareAccessRestricted: React.FC = () => {
             )}
 
             <button
-              onClick={() => useApp().logout()}
+              onClick={() => logout()}
               className="py-3 px-3 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5"
               title="Sign Out"
             >

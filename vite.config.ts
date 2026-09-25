@@ -243,6 +243,63 @@ function careqApiAuthPlugin() {
           ]
         }));
       });
+
+      // /api/auth/step-up-challenge endpoint (High-Assurance Re-Authentication)
+      server.middlewares.use('/api/auth/step-up-challenge', (req: any, res: any, _next: any) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk: any) => { body += chunk; });
+        req.on('end', () => {
+          res.setHeader('Content-Type', 'application/json');
+          try {
+            const data = JSON.parse(body || '{}');
+            const { targetRole, challengeType, code } = data;
+
+            // Doctor high-assurance codes: PIN 482910 or OTP 719402
+            // Patient high-assurance codes: PIN 123456 or OTP 654321
+            let valid = false;
+            if (targetRole === 'HEALTHCARE_PROFESSIONAL') {
+              if (challengeType === 'PIN' && code === '482910') valid = true;
+              if (challengeType === 'OTP' && code === '719402') valid = true;
+            } else if (targetRole === 'PATIENT') {
+              if (challengeType === 'PIN' && code === '123456') valid = true;
+              if (challengeType === 'OTP' && code === '654321') valid = true;
+            }
+
+            if (!valid) {
+              res.statusCode = 401;
+              res.end(JSON.stringify({
+                success: false,
+                code: 'STEP_UP_CHALLENGE_FAILED',
+                message: 'Invalid step-up challenge verification code. High-assurance check rejected.',
+                attemptsRemaining: 2
+              }));
+              return;
+            }
+
+            const stepUpToken = `STU-SEC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            res.statusCode = 200;
+            res.end(JSON.stringify({
+              success: true,
+              status: 'verified',
+              stepUpToken,
+              targetRole,
+              assuranceLevel: 'HIGH_ASSURANCE',
+              issuedAt: new Date().toISOString(),
+              message: 'High-assurance identity verification succeeded. Session transition authorized.'
+            }));
+          } catch {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+          }
+        });
+      });
     }
   };
 }

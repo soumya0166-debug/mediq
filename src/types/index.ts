@@ -101,8 +101,25 @@ export interface AuthSession {
   issuedAt: string;
   expiresAt: string;
   verifiedRoles: UserRole[];
+  authAssuranceLevel?: 'STANDARD' | 'HIGH_ASSURANCE';
+  stepUpVerifiedAt?: string;
+  clinicalJustification?: string;
   patientIdentity?: PatientIdentity;
   professionalIdentity?: ProfessionalIdentity;
+}
+
+export interface StepUpChallengeRequest {
+  targetRole: UserRole;
+  challengeType: 'PIN' | 'OTP';
+  code: string;
+  clinicalJustification?: string;
+}
+
+export interface StepUpChallengeResult {
+  success: boolean;
+  message: string;
+  token?: string;
+  attemptsRemaining?: number;
 }
 
 export type RiskLevel = 'HIGH' | 'MEDIUM' | 'LOW';
@@ -335,7 +352,10 @@ export type AuditEventType =
   | 'FOLLOWUP_REQUESTED'
   | 'REFERRAL_CREATED'
   | 'CONSENT_UPDATED'
-  | 'VOICE_RECORDING_ACCESSED';
+  | 'VOICE_RECORDING_ACCESSED'
+  | 'STEP_UP_CHALLENGE_ISSUED'
+  | 'STEP_UP_CHALLENGE_VERIFIED'
+  | 'STEP_UP_CHALLENGE_FAILED';
 
 export interface AuditEvent {
   id: string;
