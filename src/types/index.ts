@@ -1,4 +1,109 @@
-export type UserRole = 'patient' | 'doctor' | 'admin';
+export type UserRole = 'PATIENT' | 'HEALTHCARE_PROFESSIONAL';
+
+// Backward compatibility alias for UI components
+export type LegacyUserRole = 'patient' | 'doctor';
+
+export type PatientPermission = 
+  | 'patient:self:read'
+  | 'patient:self:update'
+  | 'patient:self:assessment:create'
+  | 'patient:self:assessment:read'
+  | 'patient:self:voice:create'
+  | 'patient:self:reports:read'
+  | 'patient:self:timeline:read'
+  | 'patient:self:followup:read'
+  | 'patient:self:followup:respond'
+  | 'patient:self:consent:read'
+  | 'patient:self:consent:update'
+  | 'patient:self:referral:read';
+
+export type ProfessionalPermission =
+  | 'clinical:queue:read'
+  | 'clinical:priority:read'
+  | 'clinical:case:read'
+  | 'clinical:case:review'
+  | 'clinical:case:update'
+  | 'clinical:case:request_information'
+  | 'clinical:case:priority'
+  | 'clinical:referral:create'
+  | 'clinical:referral:read'
+  | 'clinical:notes:create'
+  | 'clinical:timeline:read'
+  | 'clinical:reports:read'
+  | 'clinical:consent:read'
+  | 'clinical:audit:read';
+
+export type AppPermission = PatientPermission | ProfessionalPermission;
+
+export const PATIENT_PERMISSIONS: PatientPermission[] = [
+  'patient:self:read',
+  'patient:self:update',
+  'patient:self:assessment:create',
+  'patient:self:assessment:read',
+  'patient:self:voice:create',
+  'patient:self:reports:read',
+  'patient:self:timeline:read',
+  'patient:self:followup:read',
+  'patient:self:followup:respond',
+  'patient:self:consent:read',
+  'patient:self:consent:update',
+  'patient:self:referral:read'
+];
+
+export const PROFESSIONAL_PERMISSIONS: ProfessionalPermission[] = [
+  'clinical:queue:read',
+  'clinical:priority:read',
+  'clinical:case:read',
+  'clinical:case:review',
+  'clinical:case:update',
+  'clinical:case:request_information',
+  'clinical:case:priority',
+  'clinical:referral:create',
+  'clinical:referral:read',
+  'clinical:notes:create',
+  'clinical:timeline:read',
+  'clinical:reports:read',
+  'clinical:consent:read',
+  'clinical:audit:read'
+];
+
+export interface PatientIdentity {
+  userId: string;
+  role: 'PATIENT';
+  patientId: string;
+  name: string;
+  age: number;
+  gender: string;
+  phone: string;
+  abhaNumber?: string;
+  verifiedStatus: 'DEMO_VERIFIED' | 'VERIFIED' | 'PENDING';
+}
+
+export interface ProfessionalIdentity {
+  userId: string;
+  role: 'HEALTHCARE_PROFESSIONAL';
+  professionalId: string;
+  name: string;
+  title: string;
+  facilityId: string;
+  facilityName: string;
+  medicalRegistrationId: string;
+  state: string;
+  verifiedStatus: 'DEMO_VERIFIED' | 'VERIFIED' | 'PENDING';
+}
+
+export interface AuthSession {
+  sessionId: string;
+  userId: string;
+  role: UserRole;
+  identityId: string;
+  permissions: AppPermission[];
+  issuedAt: string;
+  expiresAt: string;
+  verifiedRoles: UserRole[];
+  patientIdentity?: PatientIdentity;
+  professionalIdentity?: ProfessionalIdentity;
+}
 
 export type RiskLevel = 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -216,12 +321,29 @@ export interface ReferralDraft {
   isDraft: boolean;
 }
 
+export type AuditEventType =
+  | 'PATIENT_LOGIN'
+  | 'PATIENT_LOGOUT'
+  | 'PROFESSIONAL_LOGIN'
+  | 'PROFESSIONAL_LOGOUT'
+  | 'WORKSPACE_SWITCH_REQUESTED'
+  | 'WORKSPACE_SWITCH_COMPLETED'
+  | 'WORKSPACE_ACCESS_DENIED'
+  | 'PATIENT_RECORD_VIEWED'
+  | 'CLINICAL_CASE_OPENED'
+  | 'CLINICAL_REVIEW_COMPLETED'
+  | 'FOLLOWUP_REQUESTED'
+  | 'REFERRAL_CREATED'
+  | 'CONSENT_UPDATED'
+  | 'VOICE_RECORDING_ACCESSED';
+
 export interface AuditEvent {
   id: string;
   timestamp: string;
   actor: string;
   actorRole: 'Patient' | 'Healthcare Worker' | 'System OCR' | 'System Triage';
   action: string;
+  eventType?: AuditEventType;
   details: string;
   ipHash: string;
   caseId?: string;

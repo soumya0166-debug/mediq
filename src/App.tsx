@@ -32,6 +32,8 @@ import { DoctorAuditLogPage } from './components/doctor/DoctorAuditLogPage';
 
 // Common Pages
 import { HealthcareAccessRestricted } from './components/common/HealthcareAccessRestricted';
+import { PatientAccessRestricted } from './components/common/PatientAccessRestricted';
+import { WorkspaceSwitchModal } from './components/common/WorkspaceSwitchModal';
 
 // Mobile navigation localized labels
 import { LayoutDashboard, ClipboardList, FileText, History, User } from 'lucide-react';
@@ -53,7 +55,7 @@ const AppContent: React.FC = () => {
     }
   }, [currentRoute, setSelectedAssessmentId]);
 
-  // Route parser
+  // Route parser with strict role separation (Sections 5, 6, 12, 19, 28, 29)
   const renderRoute = () => {
     // Auth Routes
     if (currentRoute === '/login') return <LoginPage />;
@@ -62,17 +64,25 @@ const AppContent: React.FC = () => {
     if (currentRoute === '/verify') return <VerifyPage />;
 
     // Patient Routes
-    if (currentRoute === '/patient/dashboard' || currentRoute === '/') return <PatientDashboard />;
-    if (currentRoute === '/patient/new-assessment') return <NewAssessmentPage />;
-    if (currentRoute === '/patient/history') return <PatientHistoryPage />;
-    if (currentRoute === '/patient/reports') return <PatientReportsPage />;
-    if (currentRoute === '/patient/profile') return <PatientProfilePage />;
-    if (currentRoute === '/patient/timeline') return <PatientTimelinePage />;
-    if (currentRoute === '/patient/consent') return <PatientConsentPage />;
+    if (currentRoute === '/' || currentRoute.startsWith('/patient')) {
+      // Strict Access Restriction: Clinicians must NOT enter patient self-service without switching workspaces
+      if (currentRole !== 'PATIENT') {
+        return <PatientAccessRestricted />;
+      }
+      if (currentRoute === '/patient/dashboard' || currentRoute === '/') return <PatientDashboard />;
+      if (currentRoute === '/patient/new-assessment') return <NewAssessmentPage />;
+      if (currentRoute === '/patient/history') return <PatientHistoryPage />;
+      if (currentRoute === '/patient/reports') return <PatientReportsPage />;
+      if (currentRoute === '/patient/profile') return <PatientProfilePage />;
+      if (currentRoute === '/patient/timeline') return <PatientTimelinePage />;
+      if (currentRoute === '/patient/consent') return <PatientConsentPage />;
+      return <PatientDashboard />;
+    }
+
     // Clinical / Healthcare Professional Routes (Nested in DoctorLayout)
     if (currentRoute.startsWith('/clinical') || currentRoute.startsWith('/doctor')) {
       // Strict Access Restriction: Patients must NOT have access to healthcare dashboard
-      if (currentRole === 'patient') {
+      if (currentRole !== 'HEALTHCARE_PROFESSIONAL') {
         return <HealthcareAccessRestricted />;
       }
       const renderDoctorContent = () => {
@@ -94,10 +104,10 @@ const AppContent: React.FC = () => {
     }
 
     // Default fallback based on active role
-    return currentRole === 'patient' ? <PatientDashboard /> : <DoctorLayout><DoctorDashboard /></DoctorLayout>;
+    return currentRole === 'PATIENT' ? <PatientDashboard /> : <DoctorLayout><DoctorDashboard /></DoctorLayout>;
   };
 
-  const isPatientRoute = currentRole === 'patient' && !currentRoute.startsWith('/login') && !currentRoute.startsWith('/register');
+  const isPatientRoute = currentRole === 'PATIENT' && !currentRoute.startsWith('/login') && !currentRoute.startsWith('/register');
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-teal-700 selection:text-white pb-16 md:pb-0">
@@ -174,6 +184,7 @@ const AppContent: React.FC = () => {
       <PrivacyModal />
       <DemoGuideModal />
       <LanguageWelcomeModal />
+      <WorkspaceSwitchModal />
     </div>
   );
 };

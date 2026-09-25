@@ -36,6 +36,8 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
     currentRoute, 
     navigate, 
     logout, 
+    openWorkspaceSwitcher,
+    verifiedRoles,
     setDemoGuideOpen, 
     assessments, 
     currentFacility, 
@@ -378,9 +380,22 @@ export const DoctorLayout: React.FC<{ children: React.ReactNode }> = ({ children
             </div>
           </div>
 
+          {/* Secure Workspace Switch (Section 16, 26, 27) */}
+          {verifiedRoles.includes('PATIENT') && (
+            <button
+              type="button"
+              onClick={() => openWorkspaceSwitcher('PATIENT')}
+              className="w-full mt-2 py-1.5 px-3 bg-teal-950/60 hover:bg-teal-900/80 text-teal-300 hover:text-white rounded-md text-xs font-semibold border border-teal-800/60 transition-all flex items-center justify-center gap-1.5"
+              title="Securely transition to verified Patient Workspace"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 text-teal-400" />
+              <span>Switch to Patient Workspace</span>
+            </button>
+          )}
+
           <button
             onClick={logout}
-            className="w-full mt-2 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-2"
+            className="w-full mt-1.5 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-2"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>{t('nav.signOut')}</span>

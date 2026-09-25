@@ -121,12 +121,139 @@ function voiceApiPlugin() {
   };
 }
 
+function careqApiAuthPlugin() {
+  return {
+    name: 'careq-api-auth',
+    configureServer(server: any) {
+      // Mock cases database
+      const mockCases = [
+        { id: 'case-001', patientId: 'pat-1', name: 'Ramesh Patel', priority: 'HIGH', chiefComplaint: 'Severe chest tightness & shortness of breath' },
+        { id: 'case-002', patientId: 'pat-2', name: 'Sunita Devi', priority: 'MEDIUM', chiefComplaint: 'High fever and productive cough for 3 days' },
+        { id: 'case-003', patientId: 'pat-3', name: 'Alok Mohanty', priority: 'LOW', chiefComplaint: 'Mild headache and sore throat' }
+      ];
+
+      // /api/clinical/* endpoints
+      server.middlewares.use('/api/clinical', (req: any, res: any, _next: any) => {
+        const role = req.headers['x-careq-role'];
+        const sessionId = req.headers['x-careq-session-id'];
+
+        res.setHeader('Content-Type', 'application/json');
+
+        // Enforce strict healthcare professional authorization
+        if (role !== 'HEALTHCARE_PROFESSIONAL') {
+          res.statusCode = 403;
+          res.end(JSON.stringify({
+            error: 'Forbidden',
+            code: 'ACCESS_RESTRICTED',
+            message: 'Access restricted: Verified Healthcare Professional authorization required for clinical workspace endpoints.',
+            requiredRole: 'HEALTHCARE_PROFESSIONAL',
+            providedRole: role || 'UNAUTHENTICATED'
+          }));
+          return;
+        }
+
+        if (!sessionId) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({
+            error: 'Unauthorized',
+            code: 'SESSION_MISSING',
+            message: 'Active clinical session token required.'
+          }));
+          return;
+        }
+
+        const url = req.url || '';
+        if (url.startsWith('/cases') || url.startsWith('/queue') || url === '' || url === '/') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            status: 'success',
+            workspace: 'CLINICAL_REVIEW',
+            count: mockCases.length,
+            cases: mockCases
+          }));
+          return;
+        }
+
+        if (url.startsWith('/patient/')) {
+          const patientId = url.replace('/patient/', '').split('?')[0];
+          const found = mockCases.find(c => c.patientId === patientId || c.id === patientId);
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            status: 'success',
+            clinicalCase: found || mockCases[0]
+          }));
+          return;
+        }
+
+        res.statusCode = 200;
+        res.end(JSON.stringify({ status: 'success', authorized: true, role: 'HEALTHCARE_PROFESSIONAL' }));
+      });
+
+      // /api/patient/* endpoints
+      server.middlewares.use('/api/patient', (req: any, res: any, _next: any) => {
+        const role = req.headers['x-careq-role'];
+        const patientIdHeader = req.headers['x-careq-patient-id'];
+        const sessionId = req.headers['x-careq-session-id'];
+
+        res.setHeader('Content-Type', 'application/json');
+
+        // Only PATIENT role can access self-service endpoints
+        if (role !== 'PATIENT') {
+          res.statusCode = 403;
+          res.end(JSON.stringify({
+            error: 'Forbidden',
+            code: 'PATIENT_WORKSPACE_REQUIRED',
+            message: 'Access restricted: Patient workspace authorization required.',
+            requiredRole: 'PATIENT',
+            providedRole: role || 'UNAUTHENTICATED'
+          }));
+          return;
+        }
+
+        if (!sessionId || !patientIdHeader) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({
+            error: 'Unauthorized',
+            code: 'SESSION_INVALID',
+            message: 'Valid patient session and patient identity required.'
+          }));
+          return;
+        }
+
+        // Resource ownership check: cannot query another patient's profile
+        const urlObj = new URL(req.url, 'http://localhost');
+        const queryPatientId = urlObj.searchParams.get('patientId');
+        if (queryPatientId && queryPatientId !== patientIdHeader) {
+          res.statusCode = 403;
+          res.end(JSON.stringify({
+            error: 'Forbidden',
+            code: 'RESOURCE_ACCESS_DENIED',
+            message: 'Unauthorized: Patients may only access their own clinical records and assessments.'
+          }));
+          return;
+        }
+
+        res.statusCode = 200;
+        res.end(JSON.stringify({
+          status: 'success',
+          workspace: 'PATIENT_PORTAL',
+          patientId: patientIdHeader,
+          records: [
+            { id: 'rec-001', type: 'assessment', date: '2026-09-24', status: 'reviewed' }
+          ]
+        }));
+      });
+    }
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    voiceApiPlugin()
+    voiceApiPlugin(),
+    careqApiAuthPlugin()
   ],
   server: {
     port: 5180,

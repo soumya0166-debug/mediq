@@ -14,17 +14,20 @@ import {
   FileText,
   Clock,
   CheckCircle2,
-  LayoutDashboard
+  LayoutDashboard,
+  ArrowRightLeft
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { 
     currentRole, 
+    isPatient,
     currentPatient, 
     currentDoctor, 
     currentRoute, 
     navigate, 
-    switchRole,
+    openWorkspaceSwitcher,
+    verifiedRoles,
     setPrivacyModalOpen,
     setDemoGuideOpen,
     logout
@@ -42,7 +45,7 @@ export const Navbar: React.FC = () => {
           {/* Brand & Identity */}
           <div 
             className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none flex-shrink-0" 
-            onClick={() => navigate(currentRole === 'patient' ? '/patient/dashboard' : '/clinical/dashboard')}
+            onClick={() => navigate(isPatient ? '/patient/dashboard' : '/clinical/dashboard')}
           >
             <div className="w-9 h-9 rounded-lg bg-[#0A1E3F] flex items-center justify-center text-white shadow-2xs">
               <Activity className="w-5 h-5 text-teal-400 stroke-[2.4]" />
@@ -63,7 +66,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Navigation Links for Patient */}
-          {!isAuthPage && currentRole === 'patient' && (
+          {!isAuthPage && isPatient && (
             <nav className="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-600">
               <button
                 onClick={() => navigate('/patient/dashboard')}
@@ -130,45 +133,39 @@ export const Navbar: React.FC = () => {
             </nav>
           )}
 
-          {/* Right Action Tools: Language Selector, Quick Role Switcher, Judge Demo, Profile */}
+          {/* Right Action Tools: Language Selector, Workspace Role Indicator, Switcher, Judge Demo, Profile */}
           <div className="flex items-center gap-2 sm:gap-2.5">
             
-            {/* Preferred Language Selector (Section 3 & 40) */}
+            {/* Preferred Language Selector (Section 37 - Preserves Role Separation) */}
             <LanguageSelector variant="header" />
 
-            {/* Quick Role Switcher Pill */}
+            {/* Explicit Role Indicator & Workspace Badge (Section 40) */}
             {!isAuthPage && (
-              <div className="hidden sm:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
-                <button
-                  onClick={() => switchRole('patient')}
-                  className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 font-bold ${
-                    currentRole === 'patient'
-                      ? 'bg-white text-teal-800 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Switch view to Patient Experience"
-                >
-                  <User className="w-3 h-3" />
-                  <span>{t('auth.patientRoleTitle')}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (currentRole === 'patient') {
-                      navigate('/doctor/dashboard');
-                    } else {
-                      switchRole('doctor');
-                    }
-                  }}
-                  className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 font-bold ${
-                    currentRole === 'doctor'
-                      ? 'bg-[#0A1E3F] text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title={currentRole === 'patient' ? "Healthcare Professional Portal (Restricted to Practitioners)" : "Healthcare Professional Experience"}
-                >
-                  {currentRole === 'patient' ? <Lock className="w-3 h-3 text-amber-600" /> : <Stethoscope className="w-3 h-3" />}
-                  <span>{t('auth.clinicalRoleTitle')}</span>
-                </button>
+              <div className="flex items-center gap-2">
+                {isPatient ? (
+                  <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-teal-900 font-bold text-xs shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-teal-600 inline-block animate-pulse" />
+                    <span className="uppercase tracking-wider text-[10px]">PATIENT WORKSPACE</span>
+                  </div>
+                ) : (
+                  <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-950 font-bold text-xs shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block animate-pulse" />
+                    <span className="uppercase tracking-wider text-[10px]">CLINICAL REVIEW WORKSPACE</span>
+                  </div>
+                )}
+
+                {/* Secure Workspace Switching Trigger (Section 16, 26, 27) */}
+                {verifiedRoles.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => openWorkspaceSwitcher()}
+                    className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs"
+                    title={isPatient ? "Switch to verified Healthcare Professional Workspace" : "Switch to verified Patient Workspace"}
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5 text-teal-600" />
+                    <span className="hidden md:inline">Switch Workspace</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -198,11 +195,11 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                 <div className="text-right hidden xl:block">
                   <div className="text-xs font-bold text-slate-900 flex items-center gap-1 justify-end">
-                    <span>{currentRole === 'patient' ? currentPatient?.name : currentDoctor?.name}</span>
+                    <span>{isPatient ? currentPatient?.name : currentDoctor?.name}</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" title="Verified Identity" />
                   </div>
                   <div className="text-[10px] text-slate-500 font-mono">
-                    {currentRole === 'patient' ? currentPatient?.id : currentDoctor?.medicalRegistrationId}
+                    {isPatient ? currentPatient?.id : currentDoctor?.medicalRegistrationId}
                   </div>
                 </div>
                 <button 

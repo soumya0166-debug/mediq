@@ -58,15 +58,30 @@ export const HealthcareAccessRestricted: React.FC = () => {
               <span>{t('accessRestricted.returnDashboard', 'Return to Patient Dashboard')}</span>
             </button>
 
+            {useApp().currentSession?.verifiedRoles.includes('HEALTHCARE_PROFESSIONAL') ? (
+              <button
+                onClick={() => useApp().openWorkspaceSwitcher('HEALTHCARE_PROFESSIONAL')}
+                className="py-3 px-4 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-xs sm:text-sm rounded-xl transition-all border border-teal-300 flex items-center justify-center gap-2"
+              >
+                <Stethoscope className="w-4 h-4 text-teal-700" />
+                <span>Switch to Clinical Workspace</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm rounded-xl transition-all border border-slate-300 flex items-center justify-center gap-2"
+              >
+                <Stethoscope className="w-4 h-4 text-teal-700" />
+                <span>Sign In as Healthcare Worker</span>
+              </button>
+            )}
+
             <button
-              onClick={() => {
-                switchRole('doctor');
-                navigate('/doctor/dashboard');
-              }}
-              className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm rounded-xl transition-all border border-slate-300 flex items-center justify-center gap-2"
+              onClick={() => useApp().logout()}
+              className="py-3 px-3 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5"
+              title="Sign Out"
             >
-              <Stethoscope className="w-4 h-4 text-teal-700" />
-              <span>{t('accessRestricted.signInDoctor', 'Sign In as Healthcare Worker')}</span>
+              <span>Sign Out</span>
             </button>
           </div>
 

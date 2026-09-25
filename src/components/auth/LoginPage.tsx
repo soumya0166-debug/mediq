@@ -416,7 +416,7 @@ export const LoginPage: React.FC = () => {
                         }`}
                       >
                         <div className="truncate">{d.name}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{d.role} • NMC Verified</div>
+                        <div className="text-[10px] text-slate-400 font-normal">{d.role} • Demo Verified (Prototype)</div>
                       </button>
                     ))}
                   </div>
