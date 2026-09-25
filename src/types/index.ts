@@ -118,6 +118,34 @@ export interface SourceTraceItem {
   confidenceScore?: number;
 }
 
+export interface FirstReportData {
+  summary: string;
+  source: string;
+  originalLanguage: string;
+  languageConfidence: number;
+  transcriptionConfidence: number;
+  reportedSymptoms: string[];
+  reportedDuration: string;
+  reportedConcerns: string[];
+  otherReported?: string[];
+  missingInformation: string[];
+  clinicalReviewRequired: boolean;
+  generatedAt: string;
+  modelVersions?: string;
+}
+
+export interface ExtractedInformationData {
+  symptoms: string[];
+  duration: string;
+  onset?: string;
+  severity?: string;
+  bodyLocation?: string;
+  concerns: string[];
+  existingConditions?: string;
+  medications?: string;
+  notProvided: string[];
+}
+
 export interface Assessment {
   id: string; // e.g. ASM-2026-00124
   patientId: string;
@@ -126,10 +154,14 @@ export interface Assessment {
   patientGender: 'Female' | 'Male' | 'Other';
   patientLanguage: string;
   detectedLanguage?: string;
+  languageConfidence?: number;
+  transcriptionConfidence?: number;
   translatedEnglishText?: string;
   rawSymptomText: string;
   voiceTranscript?: string;
   hasVoice: boolean;
+  audioUrl?: string;
+  audioDurationSeconds?: number;
   hasReport: boolean;
   hasImage: boolean;
   imageUrls?: string[];
@@ -140,7 +172,9 @@ export interface Assessment {
   status: AssessmentStatus;
   facilityId?: string;
   
-  // Structured triage outputs
+  // Structured triage outputs & First Report
+  firstReport?: FirstReportData;
+  extractedInformation?: ExtractedInformationData;
   structuredSymptoms: string[];
   reportedDuration: string;
   reportedConcerns: string[];

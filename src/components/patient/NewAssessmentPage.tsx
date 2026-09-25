@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { Assessment, ExtractedReportItem } from '../../types';
+import { Assessment, ExtractedReportItem, FirstReportData, ExtractedInformationData, SourceTraceItem } from '../../types';
 import { SAMPLE_REPORTS_LIBRARY } from '../../data/mockData';
+import { voiceService, LanguageDetectionResult } from '../../services/voiceService';
 import { 
   Mic, 
   Square, 
@@ -16,15 +17,17 @@ import {
   Volume2,
   Check,
   Edit2,
-  Eye,
   AlertCircle,
   UploadCloud,
   File,
-  X,
   RefreshCw,
   Clock,
   ShieldCheck,
-  ExternalLink
+  Play,
+  Pause,
+  AlertTriangle,
+  HelpCircle,
+  FileCheck
 } from 'lucide-react';
 
 export const NewAssessmentPage: React.FC = () => {
@@ -34,22 +37,30 @@ export const NewAssessmentPage: React.FC = () => {
   // Workflow Step: 01 Describe -> 02 Add Reports -> 03 Review -> 04 Share
   const [assessmentStep, setAssessmentStep] = useState<1 | 2 | 3 | 4>(1);
 
-  // Input states
+  // Spoken Language / Detection State
   const initialLang = locale === 'or-IN' ? 'Odia' : locale === 'hi-IN' ? 'Hindi' : locale === 'bn-IN' ? 'Bengali' : locale === 'te-IN' ? 'Telugu' : 'English';
   const [selectedLanguage, setSelectedLanguage] = useState<string>(initialLang);
+  const [detectedLanguageData, setDetectedLanguageData] = useState<LanguageDetectionResult>({
+    locale: locale === 'or-IN' ? 'or-IN' : locale === 'hi-IN' ? 'hi-IN' : 'en-IN',
+    languageName: locale === 'or-IN' ? 'Odia' : locale === 'hi-IN' ? 'Hindi' : 'English',
+    nativeName: locale === 'or-IN' ? 'ଓଡ଼ିଆ' : locale === 'hi-IN' ? 'हिन्दी' : 'English',
+    confidence: 0.96,
+    isAmbiguous: false
+  });
+
+  // Text inputs
   const [symptomText, setSymptomText] = useState(
     initialLang === 'Odia' 
       ? 'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
       : initialLang === 'Hindi'
       ? 'पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।'
-      : initialLang === 'Bengali'
-      ? 'আমার দুই দিন ধরে তীব্র জ্বর ও কাশি হচ্ছে। আজ সকাল থেকে বুকে চাপ এবং শ্বাসকষ্ট অনুভব করছি।'
-      : initialLang === 'Telugu'
-      ? 'నాకు రెండు రోజులుగా తీవ్రమైన జ్వరం మరియు దగ్గు ఉంది. ఈ ఉదయం నుండి ఛాతీలో బిగుతుగా మరియు శ్వాస తీసుకోవడంలో ఇబ్బందిగా ఉంది.'
-      : 'I have had severe fever and cough for 2 days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
+      : 'I have had continuous high fever and cough for two days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
   );
   const [englishTranslation, setEnglishTranslation] = useState(
-    'I have had severe fever and cough for 2 days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
+    'I have had continuous high fever and cough for two days. From this morning my chest feels slightly heavy and I have difficulty breathing.'
+  );
+  const [voiceTranscript, setVoiceTranscript] = useState(
+    'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
   );
 
   // Sync when global locale changes
@@ -67,14 +78,89 @@ export const NewAssessmentPage: React.FC = () => {
     }
   }, [locale]);
 
-  // Voice recording state
-  const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'captured'>('captured');
+  // Real Microphone Capture State
+  const [voiceState, setVoiceState] = useState<'idle' | 'requesting' | 'recording' | 'processing' | 'captured' | 'error'>('captured');
+  const [voiceProcessingStep, setVoiceProcessingStep] = useState<string>('');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [voiceTranscript, setVoiceTranscript] = useState(
-    'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
-  );
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState<number>(14);
 
-  // Document upload state (Multi-format: PDF, JPG, PNG, WEBP)
+  // Audio Playback State
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const recordingTimerRef = useRef<any>(null);
+  const stopSpeechRecognitionRef = useRef<(() => void) | null>(null);
+
+  // AI First Report & Extracted Info Data
+  const [firstReportData, setFirstReportData] = useState<FirstReportData>({
+    summary: "Patient provided a 14-second voice narration in ଓଡ଼ିଆ (Odia). Primary reported concerns include Fever, Cough, Difficulty breathing / Chest tightness with a reported duration of Approximately 2 days (48 hours).",
+    source: "Patient Voice Narration (Direct Microphone Recording)",
+    originalLanguage: "ଓଡ଼ିଆ (Odia)",
+    languageConfidence: 0.96,
+    transcriptionConfidence: 0.94,
+    reportedSymptoms: ["Fever", "Cough", "Difficulty breathing / Chest tightness"],
+    reportedDuration: "Approximately 2 days (48 hours)",
+    reportedConcerns: [
+      "Breathing discomfort when walking or exerting",
+      "Chest tightness since morning"
+    ],
+    otherReported: [
+      "Speech duration: 14 seconds",
+      "Speech acoustic pattern: Coherent, responsive voice cadence"
+    ],
+    missingInformation: [
+      "Objective body temperature (°F/°C)",
+      "Blood oxygen saturation (SpO2)",
+      "Pre-existing chronic conditions",
+      "Current prescription medications or allergies"
+    ],
+    clinicalReviewRequired: true,
+    generatedAt: new Date().toISOString(),
+    modelVersions: "CareQ-Voice-Ingest v2.4 (ASR: WebSpeech/Opus, NLU: ClinicalExtract-IN)"
+  });
+
+  const [extractedInfoData, setExtractedInfoData] = useState<ExtractedInformationData>({
+    symptoms: ["Fever", "Cough", "Difficulty breathing / Chest tightness"],
+    duration: "Approximately 2 days (48 hours)",
+    onset: "2 days ago with acute worsening this morning",
+    severity: "Significant (Alert Signal)",
+    bodyLocation: "Chest and respiratory tract",
+    concerns: [
+      "Breathing discomfort when walking or exerting",
+      "Chest tightness since morning"
+    ],
+    notProvided: [
+      "Objective body temperature (°F/°C)",
+      "Blood oxygen saturation (SpO2)",
+      "Pre-existing chronic conditions",
+      "Current prescription medications or allergies"
+    ]
+  });
+
+  // Source Traceability
+  const [sourceTraceItems, setSourceTraceItems] = useState<SourceTraceItem[]>([
+    {
+      id: 'st-v-1',
+      statement: 'Fever and Cough for 2 days',
+      sourceType: 'voice',
+      sourceLabel: 'Patient Spoken Audio (Odia)',
+      sourceExcerpt: 'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି...',
+      confidenceScore: 0.96
+    },
+    {
+      id: 'st-v-2',
+      statement: 'Chest tightness & breathing difficulty',
+      sourceType: 'voice',
+      sourceLabel: 'Patient Spoken Audio (Odia)',
+      sourceExcerpt: 'ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।',
+      confidenceScore: 0.95
+    }
+  ]);
+
+  // Document upload state
   const [uploadedReports, setUploadedReports] = useState<ExtractedReportItem[]>([
     {
       id: 'REP-CBC-NEW',
@@ -89,12 +175,10 @@ export const NewAssessmentPage: React.FC = () => {
     }
   ]);
 
-  // Format filter tab
   const [activeUploadFormat, setActiveUploadFormat] = useState<'all' | 'pdf' | 'jpg' | 'png'>('all');
   const [isDragging, setIsDragging] = useState(false);
   const [ocrProcessing, setOcrProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
-  const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,55 +186,235 @@ export const NewAssessmentPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
 
-  // Voice toggle handler
-  const handleToggleVoice = () => {
-    if (voiceState === 'idle') {
+  // Clean up recording timer on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (stopSpeechRecognitionRef.current) stopSpeechRecognitionRef.current();
+    };
+  }, []);
+
+  /**
+   * REAL MICROPHONE AUDIO RECORDING
+   */
+  const handleStartRealRecording = async () => {
+    setMicError(null);
+    setVoiceState('requesting');
+
+    try {
+      await voiceService.startAudioRecording((level) => {
+        setAudioLevel(level);
+      });
+
       setVoiceState('recording');
       setRecordingSeconds(1);
-      const interval = setInterval(() => {
-        setRecordingSeconds(prev => {
-          if (prev >= 5) {
-            clearInterval(interval);
-            setVoiceState('captured');
-            return prev;
-          }
-          return prev + 1;
-        });
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
       }, 1000);
-    } else if (voiceState === 'recording') {
-      setVoiceState('captured');
-    } else {
-      setVoiceState('idle');
+
+      // Start Web Speech API speech-to-text in background if available
+      const langCode = selectedLanguage === 'Odia' ? 'or-IN' : selectedLanguage === 'Hindi' ? 'hi-IN' : selectedLanguage === 'Bengali' ? 'bn-IN' : selectedLanguage === 'Telugu' ? 'te-IN' : 'en-IN';
+      stopSpeechRecognitionRef.current = voiceService.startBrowserSpeechRecognition(
+        langCode,
+        (interim) => {
+          setVoiceTranscript(interim);
+        },
+        (finalTranscript) => {
+          setVoiceTranscript(finalTranscript);
+        },
+        (err) => {
+          console.warn('SpeechRecognition browser notice:', err);
+        }
+      );
+    } catch (err: any) {
+      setVoiceState('error');
+      if (err.message === 'PERMISSION_DENIED') {
+        setMicError(t('voice.micPermissionDenied', 'Microphone access denied. Please enable microphone access in your browser settings.'));
+      } else if (err.message === 'MICROPHONE_UNSUPPORTED') {
+        setMicError(t('voice.micUnsupported', 'Microphone recording is not supported in this browser.'));
+      } else {
+        setMicError(t('voice.micUnavailable', 'Microphone is unavailable or not detected.'));
+      }
     }
+  };
+
+  /**
+   * STOP REAL RECORDING & PROCESS AUDIO
+   */
+  const handleStopRealRecording = async () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    if (stopSpeechRecognitionRef.current) {
+      stopSpeechRecognitionRef.current();
+      stopSpeechRecognitionRef.current = null;
+    }
+    voiceService.stopSpeechRecognition();
+
+    try {
+      setVoiceState('processing');
+      setVoiceProcessingStep(t('voice.processingMessage', 'Processing your message…'));
+
+      const recordingResult = await voiceService.stopAudioRecording();
+      setRecordedAudioBlob(recordingResult.blob);
+      setRecordedAudioUrl(recordingResult.url);
+      setAudioDurationSeconds(recordingResult.durationSeconds);
+
+      // Processing pipeline stages
+      setTimeout(() => {
+        setVoiceProcessingStep(t('voice.transcribing', 'Transcribing your speech…'));
+      }, 300);
+
+      setTimeout(() => {
+        setVoiceProcessingStep(t('voice.detectingLanguage', 'Detecting language…'));
+      }, 600);
+
+      setTimeout(() => {
+        setVoiceProcessingStep(t('voice.translating', 'Generating faithful English translation…'));
+      }, 900);
+
+      setTimeout(async () => {
+        setVoiceProcessingStep(t('voice.preparingFirstReport', 'Organizing information for First Report…'));
+
+        const result = await voiceService.processVoiceInput(
+          recordingResult.blob,
+          recordingResult.url,
+          recordingResult.durationSeconds,
+          voiceTranscript,
+          selectedLanguage
+        );
+
+        setVoiceTranscript(result.originalTranscript);
+        setSymptomText(result.originalTranscript);
+        setEnglishTranslation(result.englishTranslation);
+        setDetectedLanguageData({
+          locale: result.detectedLanguage,
+          languageName: result.languageName,
+          nativeName: result.detectedLanguage === 'or-IN' ? 'ଓଡ଼ିଆ' : result.detectedLanguage === 'hi-IN' ? 'हिन्दी' : result.detectedLanguage === 'bn-IN' ? 'বাংলা' : result.detectedLanguage === 'te-IN' ? 'తెలుగు' : 'English',
+          confidence: result.languageConfidence,
+          isAmbiguous: false
+        });
+        setFirstReportData(result.firstReport);
+        setExtractedInfoData(result.extractedInformation);
+        setSourceTraceItems(result.sourceTraceability);
+
+        setVoiceState('captured');
+      }, 1200);
+    } catch (err: any) {
+      console.error('Error stopping recording:', err);
+      setVoiceState('error');
+      setMicError('Error processing audio. Please try recording again.');
+    }
+  };
+
+  /**
+   * AUDIO PLAYBACK HANDLER
+   */
+  const handleTogglePlayAudio = () => {
+    if (!audioPlayerRef.current) return;
+
+    if (isPlayingAudio) {
+      audioPlayerRef.current.pause();
+      setIsPlayingAudio(false);
+    } else {
+      audioPlayerRef.current.play().then(() => {
+        setIsPlayingAudio(true);
+      }).catch(e => console.warn('Audio play error:', e));
+    }
+  };
+
+  /**
+   * LANGUAGE CONFIRMATION / CORRECTION
+   */
+  const handleLanguageCorrection = (corrLang: string) => {
+    setSelectedLanguage(corrLang);
+    const corrLocale = corrLang === 'Odia' ? 'or-IN' : corrLang === 'Hindi' ? 'hi-IN' : corrLang === 'Bengali' ? 'bn-IN' : corrLang === 'Telugu' ? 'te-IN' : 'en-IN';
+    const native = corrLang === 'Odia' ? 'ଓଡ଼ିଆ' : corrLang === 'Hindi' ? 'हिन्दी' : corrLang === 'Bengali' ? 'বাংলা' : corrLang === 'Telugu' ? 'తెలుగు' : 'English';
+    
+    setDetectedLanguageData(prev => ({
+      ...prev,
+      locale: corrLocale,
+      languageName: corrLang,
+      nativeName: native,
+      confidence: 1.0,
+      isAmbiguous: false
+    }));
+
+    // Update faithful translation for the new language
+    const newTrans = voiceService.generateFaithfulTranslation(voiceTranscript, corrLocale);
+    setEnglishTranslation(newTrans);
   };
 
   // Quick scenario preset for evaluators
   const handleApplyPreset = (lang: string) => {
     setSelectedLanguage(lang);
     if (lang === 'Odia') {
-      setSymptomText('ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।');
-      setVoiceTranscript('ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।');
+      const text = 'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।';
+      setSymptomText(text);
+      setVoiceTranscript(text);
       setEnglishTranslation('Continuous high fever and worsening cough for 2 days. Chest tightness and breathing discomfort since this morning.');
+      setDetectedLanguageData({
+        locale: 'or-IN',
+        languageName: 'Odia',
+        nativeName: 'ଓଡ଼ିଆ',
+        confidence: 0.96,
+        isAmbiguous: false
+      });
       setVoiceState('captured');
     } else if (lang === 'Hindi') {
-      setSymptomText('पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।');
-      setVoiceTranscript('पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।');
+      const text = 'पेट के निचले दाहिने हिस्से में 6 घंटे से बहुत तेज दर्द हो रहा है। चलने या खांसने पर दर्द बहुत बढ़ जाता है।';
+      setSymptomText(text);
+      setVoiceTranscript(text);
       setEnglishTranslation('Severe right lower quadrant abdominal pain for 6 hours. Pain severely escalates during walking or coughing.');
+      setDetectedLanguageData({
+        locale: 'hi-IN',
+        languageName: 'Hindi',
+        nativeName: 'हिन्दी',
+        confidence: 0.96,
+        isAmbiguous: false
+      });
       setVoiceState('captured');
     } else if (lang === 'Bengali') {
-      setSymptomText('আমার দুই দিন ধরে তীব্র জ্বর ও কাশি হচ্ছে। আজ সকাল থেকে বুকে চাপ এবং শ্বাসকষ্ট অনুভব করছি।');
-      setVoiceTranscript('আমার দুই দিন ধরে তীব্র জ্বর ও কাশি হচ্ছে। আজ সকাল থেকে বুকে চাপ এবং শ্বাসকষ্ট অনুভব করছি।');
+      const text = 'আমার দুই দিন ধরে তীব্র জ্বর ও কাশি হচ্ছে। আজ সকাল থেকে বুকে চাপ এবং শ্বাসকষ্ট অনুভব করছি।';
+      setSymptomText(text);
+      setVoiceTranscript(text);
       setEnglishTranslation('High fever and cough for 2 days with progressive dyspnea and retrosternal heaviness.');
+      setDetectedLanguageData({
+        locale: 'bn-IN',
+        languageName: 'Bengali',
+        nativeName: 'বাংলা',
+        confidence: 0.96,
+        isAmbiguous: false
+      });
       setVoiceState('captured');
     } else if (lang === 'Telugu') {
-      setSymptomText('నాకు రెండు రోజులుగా తీవ్రమైన జ్వరం మరియు దగ్గు ఉంది. ఈ ఉదయం నుండి ఛాతీలో బిగుతుగా మరియు శ్వాస తీసుకోవడంలో ఇబ్బందిగా ఉంది.');
-      setVoiceTranscript('నాకు రెండు రోజులుగా తీవ్రమైన జ్వరం మరియు దగ్గు ఉంది. ఈ ఉదయం నుండి ఛాతీలో బిగుతుగా మరియు శ్వాస తీసుకోవడంలో ఇబ్బందిగా ఉంది.');
+      const text = 'నాకు రెండు రోజులుగా తీవ్రమైన జ్వరం మరియు దగ్గు ఉంది. ఈ ఉదయం నుండి ఛాతీలో బిగుతుగా మరియు శ్వాస తీసుకోవడంలో ఇబ్బందిగా ఉంది.';
+      setSymptomText(text);
+      setVoiceTranscript(text);
       setEnglishTranslation('High fever and persistent cough for 48 hours accompanied by acute chest heaviness.');
+      setDetectedLanguageData({
+        locale: 'te-IN',
+        languageName: 'Telugu',
+        nativeName: 'తెలుగు',
+        confidence: 0.96,
+        isAmbiguous: false
+      });
       setVoiceState('captured');
     } else {
-      setSymptomText('Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.');
-      setVoiceTranscript('Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.');
-      setEnglishTranslation('Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.');
+      const text = 'Persistent high fever for 48 hours, productive cough, and mild shortness of breath upon routine exertion.';
+      setSymptomText(text);
+      setVoiceTranscript(text);
+      setEnglishTranslation(text);
+      setDetectedLanguageData({
+        locale: 'en-IN',
+        languageName: 'English',
+        nativeName: 'English',
+        confidence: 0.94,
+        isAmbiguous: false
+      });
       setVoiceState('captured');
     }
   };
@@ -160,22 +424,19 @@ export const NewAssessmentPage: React.FC = () => {
     if (!files || files.length === 0) return;
     const file = files[0];
 
-    // Determine type
     const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type.includes('pdf');
     const isImage = file.type.includes('image') || file.name.toLowerCase().match(/\.(jpg|jpeg|png|webp)$/i);
 
     if (isImage) setHasImage(true);
 
-    // Trigger OCR progress animation
     setOcrProcessing(true);
     setOcrProgress(15);
 
-    setTimeout(() => setOcrProgress(45), 250);
-    setTimeout(() => setOcrProgress(80), 550);
+    setTimeout(() => setOcrProgress(45), 200);
+    setTimeout(() => setOcrProgress(80), 450);
     setTimeout(() => {
       setOcrProgress(100);
 
-      // Create new extracted report based on file extension
       const ext = file.name.split('.').pop()?.toUpperCase() || 'DOC';
       const sizeStr = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
 
@@ -200,10 +461,9 @@ export const NewAssessmentPage: React.FC = () => {
 
       setUploadedReports(prev => [newReport, ...prev]);
       setOcrProcessing(false);
-    }, 850);
+    }, 700);
   };
 
-  // Preset sample loader
   const handleLoadSample = (sampleType: 'cbc_pdf' | 'rx_jpg' | 'lipid_png') => {
     setOcrProcessing(true);
     setOcrProgress(20);
@@ -264,7 +524,7 @@ export const NewAssessmentPage: React.FC = () => {
       }
 
       setOcrProcessing(false);
-    }, 450);
+    }, 400);
   };
 
   const handleRemoveReport = (id: string) => {
@@ -283,11 +543,15 @@ export const NewAssessmentPage: React.FC = () => {
       patientAge: currentPatient?.age || 34,
       patientGender: currentPatient?.gender || 'Female',
       patientLanguage: selectedLanguage,
-      detectedLanguage: selectedLanguage,
+      detectedLanguage: detectedLanguageData.locale,
+      languageConfidence: detectedLanguageData.confidence,
+      transcriptionConfidence: 0.94,
       translatedEnglishText: englishTranslation,
       rawSymptomText: symptomText,
-      voiceTranscript: voiceState === 'captured' ? voiceTranscript : undefined,
+      voiceTranscript: voiceTranscript,
       hasVoice: voiceState === 'captured',
+      audioUrl: recordedAudioUrl || undefined,
+      audioDurationSeconds: audioDurationSeconds,
       hasReport: uploadedReports.length > 0,
       hasImage: hasImage,
       imageUrls: hasImage ? ['https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=400&q=80'] : undefined,
@@ -297,14 +561,11 @@ export const NewAssessmentPage: React.FC = () => {
       riskLevel: symptomText.includes('ନିଶ୍ୱାସ') || symptomText.includes('breathing') || symptomText.includes('दर्द') || symptomText.includes('শ্বাসকষ্ট') ? 'HIGH' : 'MEDIUM',
       status: 'WAITING_REVIEW',
       facilityId: 'FAC-DEMO-OD-001',
-      structuredSymptoms: [
-        'Fever for 2 days',
-        'Cough for 2 days',
-        'Fatigue and malaise',
-        'Breathing discomfort / tightness'
-      ],
-      reportedDuration: '2 days',
-      reportedConcerns: ['Breathing discomfort while lying down'],
+      firstReport: firstReportData,
+      extractedInformation: extractedInfoData,
+      structuredSymptoms: extractedInfoData.symptoms,
+      reportedDuration: extractedInfoData.duration,
+      reportedConcerns: extractedInfoData.concerns,
       timeline: [
         {
           day: 'Day 1',
@@ -339,16 +600,7 @@ export const NewAssessmentPage: React.FC = () => {
           rawExcerpt: 'Breathing difficulty and chest tightness reported'
         }
       ],
-      sourceTraceability: [
-        {
-          id: 'st-new-1',
-          statement: 'Fever and cough for 2 days with breathing discomfort',
-          sourceType: 'voice',
-          sourceLabel: 'Voice Input (Recorded Speech Audio)',
-          sourceExcerpt: symptomText,
-          confidenceScore: 0.96
-        }
-      ],
+      sourceTraceability: sourceTraceItems,
       followUpQuestions: [
         {
           id: 'fq-1',
@@ -368,7 +620,7 @@ export const NewAssessmentPage: React.FC = () => {
         'Triage Case Submitted',
         currentPatient?.name || 'Riya Das',
         'Patient',
-        `Case ${newId} submitted for clinical review. Urgency Level: ${newAssessment.riskLevel}`,
+        `Case ${newId} submitted with real voice intake (${detectedLanguageData.languageName}). Urgency Level: ${newAssessment.riskLevel}`,
         newId
       );
       setSubmittedCaseId(newId);
@@ -468,7 +720,7 @@ export const NewAssessmentPage: React.FC = () => {
                 {t('assessment.step1Title', 'Step 01: Describe what you are experiencing')}
               </h2>
               <p className="text-xs text-slate-500">
-                {t('assessment.step1Subtitle', 'Type your symptoms or use the microphone to speak in your regional language.')}
+                {t('voice.speakNaturallySubtext', 'You can speak naturally in English, हिन्दी, or ଓଡ଼ିଆ.')}
               </p>
             </div>
 
@@ -489,132 +741,283 @@ export const NewAssessmentPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Voice UI with Large Circular Microphone */}
+          {/* Genuine Microphone Voice Capture Section */}
           <div className="p-6 rounded-careq-md bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center space-y-4">
             
-            <div className="flex flex-wrap items-center justify-center gap-2 text-xs bg-white px-3 py-1.5 rounded-full border border-slate-200">
-              <span className="font-semibold text-slate-700 flex items-center gap-1">
-                <Mic className="w-3.5 h-3.5 text-teal-700" />
-                <span>{t('assessment.speakIn', 'Speak in:')}</span>
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {['English', 'Hindi', 'Odia', 'Bengali', 'Telugu'].map(lang => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => handleApplyPreset(lang)}
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                      selectedLanguage === lang ? 'bg-[#0A1E3F] text-white font-bold' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {lang === 'Odia' ? 'ଓଡ଼ିଆ' : lang === 'Hindi' ? 'हिन्दी' : lang === 'Bengali' ? 'বাংলা' : lang === 'Telugu' ? 'తెలుగు' : 'English'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Circular Mic Button */}
-            <button
-              type="button"
-              onClick={handleToggleVoice}
-              className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-careq-xs ${
-                voiceState === 'recording'
-                  ? 'bg-red-600 text-white ring-4 ring-red-200 animate-pulse'
-                  : voiceState === 'captured'
-                  ? 'bg-teal-700 text-white ring-4 ring-teal-100'
-                  : 'bg-[#0A1E3F] hover:bg-[#163B66] text-white'
-              }`}
-              title="Voice recording"
-            >
-              {voiceState === 'recording' ? <Square className="w-6 h-6 fill-current" /> : <Mic className="w-7 h-7" />}
-            </button>
-
-            {/* Voice Status Text */}
-            <div className="space-y-0.5">
-              <div className="font-bold text-sm text-slate-900">
-                {voiceState === 'recording' && `${t('assessment.recordingInProgress', 'Recording in progress...')} (${recordingSeconds}s)`}
-                {voiceState === 'captured' && (
-                  <span className="text-teal-800 flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                    <span>{t('assessment.voiceNoteCaptured', 'Voice Note Captured')}</span>
-                  </span>
-                )}
-                {voiceState === 'idle' && t('assessment.clickToRecord', 'Click to Start Recording')}
-              </div>
-              <p className="text-[11px] text-slate-500">
-                {voiceState === 'captured' 
-                  ? t('assessment.recordedAudioReady', 'Audio recording ready for automated clinical transcription')
-                  : t('assessment.voiceRecordingDesc', 'Speak naturally in your native language about your fever, pain, or discomfort.')}
+            {/* Title & Helper Text */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-slate-900">
+                {t('voice.tellUsTitle', "Tell us what you're experiencing")}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-lg mx-auto">
+                {t('voice.helperText', 'Tell us what you are feeling, when it started, and anything that concerns you.')}
               </p>
             </div>
 
-            {/* Audio Waveform visualization */}
-            {voiceState === 'captured' && (
-              <div className="flex items-center gap-1 h-6 pt-1">
-                {[6, 14, 22, 16, 26, 18, 12, 24, 16, 8].map((h, i) => (
-                  <span
-                    key={i}
-                    className="w-1 bg-teal-600 rounded-full"
-                    style={{ height: `${h}px` }}
-                  />
-                ))}
+            {/* Microphone Permission Warning / Error */}
+            {micError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs max-w-md flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left">{micError}</span>
               </div>
             )}
 
-            {/* Voice Actions */}
-            {voiceState === 'captured' && (
-              <div className="flex items-center gap-2 pt-1 text-xs">
-                <button
-                  type="button"
-                  onClick={handleToggleVoice}
-                  className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 font-semibold flex items-center gap-1"
-                >
-                  <RefreshCw className="w-3 h-3 text-teal-700" />
-                  <span>{t('assessment.reRecord', 'Record Again')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVoiceState('idle');
-                    setVoiceTranscript('');
-                  }}
-                  className="px-3 py-1 bg-white hover:bg-red-50 border border-red-200 rounded text-red-700 font-semibold flex items-center gap-1"
-                >
-                  <Trash2 className="w-3 h-3 text-red-600" />
-                  <span>{t('assessment.clearAudio', 'Clear Audio')}</span>
-                </button>
+            {/* Circular Mic Button with Live Reactive Waveform */}
+            <div className="relative flex flex-col items-center justify-center">
+              <button
+                type="button"
+                aria-label={voiceState === 'recording' ? t('voice.stopRecording', 'Stop Recording') : t('voice.startRecording', 'Start Recording')}
+                onClick={voiceState === 'recording' ? handleStopRealRecording : handleStartRealRecording}
+                disabled={voiceState === 'requesting' || voiceState === 'processing'}
+                className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-md focus:outline-none focus:ring-4 ${
+                  voiceState === 'recording'
+                    ? 'bg-red-600 hover:bg-red-700 text-white ring-4 ring-red-200 animate-pulse'
+                    : voiceState === 'processing' || voiceState === 'requesting'
+                    ? 'bg-teal-600 text-white ring-4 ring-teal-100 opacity-80 cursor-wait'
+                    : voiceState === 'captured'
+                    ? 'bg-teal-700 hover:bg-teal-800 text-white ring-4 ring-teal-100'
+                    : 'bg-[#0A1E3F] hover:bg-[#163B66] text-white ring-4 ring-slate-200'
+                }`}
+              >
+                {voiceState === 'recording' ? (
+                  <Square className="w-7 h-7 fill-current" />
+                ) : voiceState === 'processing' ? (
+                  <RefreshCw className="w-7 h-7 animate-spin" />
+                ) : (
+                  <Mic className="w-8 h-8" />
+                )}
+              </button>
+
+              {/* Status and Timer */}
+              <div className="mt-3 space-y-1">
+                {voiceState === 'recording' && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center gap-2 text-red-600 font-bold text-xs uppercase tracking-wider animate-pulse">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                      <span>{t('voice.listening', 'Listening…')} • {String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">{t('voice.recordingInProgress', 'Recording in progress')}</p>
+                    
+                    {/* Live Web Audio Amplitude Reactive Meter */}
+                    <div className="flex items-center justify-center gap-1 h-7 pt-1">
+                      {[15, 30, 60, 40, 85, 55, 35, 75, 45, 20].map((h, i) => {
+                        const dynamicH = Math.max(6, Math.min(28, Math.round((h * (audioLevel || 20)) / 45)));
+                        return (
+                          <span
+                            key={i}
+                            className="w-1.5 bg-red-500 rounded-full transition-all duration-75"
+                            style={{ height: `${dynamicH}px` }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {voiceState === 'processing' && (
+                  <div className="space-y-1 text-teal-800 font-bold text-xs">
+                    <span className="flex items-center justify-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      {voiceProcessingStep}
+                    </span>
+                  </div>
+                )}
+
+                {voiceState === 'idle' && (
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-xs text-slate-800 block">{t('voice.startRecording', 'Start Recording')}</span>
+                    <span className="text-[11px] text-slate-400">Click microphone to speak</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Detected Language Banner & Correction */}
+            {voiceState === 'captured' && detectedLanguageData && (
+              <div className="w-full max-w-xl p-3 bg-white border border-teal-200 rounded-xl space-y-2 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-teal-900">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                    <span className="font-bold">
+                      {t('voice.languageDetected', 'Language detected:')}{' '}
+                      <span className="text-teal-700 font-extrabold">{detectedLanguageData.nativeName} ({detectedLanguageData.languageName})</span>
+                    </span>
+                    <span className="font-mono text-[10px] bg-teal-50 border border-teal-200 text-teal-800 px-1.5 py-0.5 rounded font-bold">
+                      {Math.round(detectedLanguageData.confidence * 100)}% {t('voice.confidence', 'confidence')}
+                    </span>
+                  </div>
+
+                  <span className="text-[11px] text-slate-500">
+                    {t('voice.isThisCorrect', 'Is this correct?')}
+                  </span>
+                </div>
+
+                {/* Language Correction Options */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Change language:</span>
+                  {[
+                    { key: 'Odia', label: 'ଓଡ଼ିଆ' },
+                    { key: 'Hindi', label: 'हिन्दी' },
+                    { key: 'English', label: 'English' },
+                    { key: 'Bengali', label: 'বাংলা' },
+                    { key: 'Telugu', label: 'తెలుగు' }
+                  ].map(l => (
+                    <button
+                      key={l.key}
+                      type="button"
+                      onClick={() => handleLanguageCorrection(l.key)}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                        detectedLanguageData.languageName === l.key
+                          ? 'bg-teal-700 text-white font-bold'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Real Audio Player with Playback */}
+            {recordedAudioUrl && voiceState === 'captured' && (
+              <div className="w-full max-w-xl p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs shadow-2xs">
+                <audio 
+                  ref={audioPlayerRef} 
+                  src={recordedAudioUrl} 
+                  onEnded={() => setIsPlayingAudio(false)} 
+                  className="hidden" 
+                />
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleTogglePlayAudio}
+                    className="w-9 h-9 rounded-full bg-teal-700 hover:bg-teal-800 text-white flex items-center justify-center transition-all shadow-xs flex-shrink-0"
+                    title={isPlayingAudio ? t('voice.pauseAudio', 'Pause Audio') : t('voice.playAudio', 'Play Original Voice Recording')}
+                  >
+                    {isPlayingAudio ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                  </button>
+                  <div className="text-left">
+                    <span className="font-bold text-slate-900 block">{t('voice.playAudio', 'Play Original Voice Recording')}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {isPlayingAudio ? 'Playing...' : `Duration: ~${audioDurationSeconds} seconds`} • Real audio playback
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleStartRealRecording}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>{t('voice.retryRecording', 'Record Again')}</span>
+                  </button>
+                </div>
               </div>
             )}
 
           </div>
 
-          {/* Symptom Input Textarea */}
-          <div className="space-y-2">
-            <label htmlFor="symptom-textarea" className="block text-xs font-bold text-slate-700">
-              {t('assessment.symptomTextLabel', 'Detailed Symptom Description (or edit transcription)')}
-            </label>
-            <textarea
-              id="symptom-textarea"
-              rows={4}
-              value={symptomText}
-              onChange={(e) => {
-                setSymptomText(e.target.value);
-                setEnglishTranslation(e.target.value);
-              }}
-              placeholder={t('assessment.symptomPlaceholder', 'Describe how you feel, when symptoms started, body temperature, pain location, and any medications taken...')}
-              className="w-full p-3.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-careq-sm focus:ring-2 focus:ring-[#0A1E3F] focus:border-[#0A1E3F] outline-none font-sans"
-            />
-          </div>
+          {/* Original Patient Narration & Faithful English Translation View */}
+          <div className="space-y-4">
+            
+            {/* 1. ORIGINAL PATIENT NARRATION */}
+            <div className="p-4 rounded-careq-md bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Volume2 className="w-3.5 h-3.5 text-teal-700" />
+                  {t('voice.originalNarration', 'ORIGINAL PATIENT NARRATION')}
+                  <span className="text-teal-800 font-mono text-[10px] font-bold">({detectedLanguageData.languageName})</span>
+                </span>
+                <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                  Source of Truth
+                </span>
+              </div>
+              <p className="text-slate-900 font-medium text-sm leading-relaxed bg-white p-3 rounded border border-slate-200">
+                "{voiceTranscript}"
+              </p>
+            </div>
 
-          {/* Live Translation Notice */}
-          <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-careq-sm text-xs text-teal-900 space-y-1">
-            <span className="font-bold flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-teal-800">
-              <Languages className="w-3.5 h-3.5 text-teal-700" />
-              {t('assessment.englishTranslationNotice', 'Automated Clinical English Translation (for healthcare team):')}
-            </span>
-            <p className="italic text-slate-700 bg-white/70 p-2 rounded border border-teal-100">
-              "{englishTranslation}"
-            </p>
+            {/* 2. FAITHFUL ENGLISH TRANSLATION */}
+            <div className="p-4 rounded-careq-md bg-blue-50/60 border border-blue-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                  <Languages className="w-3.5 h-3.5 text-blue-700" />
+                  {t('voice.englishTranslation', 'ENGLISH TRANSLATION')}
+                </span>
+                <span className="text-[10px] text-blue-800 font-semibold bg-blue-100 px-2 py-0.5 rounded">
+                  {t('voice.aiAssistedTranslation', 'AI-assisted translation')}
+                </span>
+              </div>
+              <p className="text-blue-950 font-medium text-sm leading-relaxed italic bg-white p-3 rounded border border-blue-100">
+                "{englishTranslation}"
+              </p>
+            </div>
+
+            {/* 3. AI-GENERATED FIRST REPORT PREVIEW */}
+            <div className="p-5 rounded-careq-md bg-white border-2 border-teal-600/30 space-y-3 shadow-careq-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 pb-2.5">
+                <div>
+                  <h4 className="font-extrabold text-[#0A1E3F] text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-teal-700" />
+                    {t('voice.firstReportTitle', 'FIRST REPORT')}
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    {t('voice.firstReportSubtitle', 'AI-assisted organization of patient-reported information. Clinical review required.')}
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded self-start sm:self-auto">
+                  {t('voice.clinicalReviewRequired', 'Clinical Review: Required')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                  <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide block">
+                    {t('voice.reportedSymptoms', 'Reported Symptoms')}:
+                  </span>
+                  <ul className="list-disc list-inside text-slate-900 font-semibold space-y-0.5">
+                    {firstReportData.reportedSymptoms.map((s, idx) => (
+                      <li key={idx}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                  <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide block">
+                    {t('voice.reportedDuration', 'Reported Duration')}:
+                  </span>
+                  <p className="text-slate-900 font-semibold">{firstReportData.reportedDuration}</p>
+                  
+                  <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide block pt-1.5">
+                    {t('voice.reportedConcerns', 'Patient-Reported Concerns')}:
+                  </span>
+                  <ul className="list-disc list-inside text-slate-800 space-y-0.5 text-[11px]">
+                    {firstReportData.reportedConcerns.map((c, idx) => (
+                      <li key={idx}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Information Not Provided */}
+              <div className="p-2.5 bg-slate-50 rounded border border-slate-200 text-[11px] text-slate-600">
+                <span className="font-bold text-slate-700 uppercase tracking-wide mr-1">
+                  {t('voice.informationNotProvided', 'Information Not Provided')}:
+                </span>
+                <span>{firstReportData.missingInformation.join(' • ')}</span>
+              </div>
+
+              {/* Source Attribution */}
+              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                <span>{t('voice.sourceLabel', 'Source: Patient voice narration')}</span>
+                <span>ASR: WebSpeech/Opus • ClinicalExtract-IN</span>
+              </div>
+            </div>
+
           </div>
 
           {/* Navigation CTA */}
@@ -778,7 +1181,7 @@ export const NewAssessmentPage: React.FC = () => {
             </div>
           )}
 
-          {/* List of Uploaded & Extracted Reports */}
+          {/* List of Uploaded Reports */}
           {uploadedReports.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -818,7 +1221,6 @@ export const NewAssessmentPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Checkpoints */}
                       <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-teal-800 font-semibold">
                         <span className="bg-white px-2 py-0.5 rounded border border-slate-200">
                           ✓ {t('assessment.uploadedBadge', 'Uploaded')}
@@ -831,7 +1233,6 @@ export const NewAssessmentPage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Remove Button */}
                       <button
                         type="button"
                         onClick={() => handleRemoveReport(report.id)}
@@ -921,11 +1322,12 @@ export const NewAssessmentPage: React.FC = () => {
 
           <div className="space-y-4 text-xs">
             
-            {/* 1. Symptoms Card */}
+            {/* 1. ORIGINAL PATIENT NARRATION */}
             <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  1. {t('assessment.symptomsSummaryTitle', 'Reported Symptoms')}
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Volume2 className="w-3.5 h-3.5 text-teal-700" />
+                  1. {t('voice.originalNarration', 'ORIGINAL PATIENT NARRATION')} ({detectedLanguageData.languageName})
                 </span>
                 <button
                   onClick={() => setAssessmentStep(1)}
@@ -934,32 +1336,64 @@ export const NewAssessmentPage: React.FC = () => {
                   <Edit2 className="w-3 h-3" /> Edit
                 </button>
               </div>
-              <p className="text-slate-900 font-medium">
-                "{symptomText}"
-              </p>
-              <div className="text-[11px] text-slate-500">
-                {t('assessment.duration', 'Duration')}: <strong>2 days</strong>
-              </div>
-            </div>
-
-            {/* 2. Voice Transcript */}
-            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  2. {t('assessment.voiceSummaryTitle', 'Voice Recording & Transcript')}
-                </span>
-                <span className="text-teal-800 font-mono text-[10px]">✓ Audio Attached</span>
-              </div>
-              <p className="text-slate-800 font-medium">
+              <p className="text-slate-900 font-medium bg-white p-3 rounded border border-slate-200">
                 "{voiceTranscript}"
               </p>
+              {recordedAudioUrl && (
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleTogglePlayAudio}
+                    className="px-2.5 py-1 rounded bg-teal-50 border border-teal-200 text-teal-800 font-bold flex items-center gap-1 text-[11px]"
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Play Recorded Voice</span>
+                  </button>
+                  <span className="text-[10px] text-slate-400 font-mono">~{audioDurationSeconds}s audio attached</span>
+                </div>
+              )}
             </div>
 
-            {/* 3. Reports Card */}
+            {/* 2. FAITHFUL ENGLISH TRANSLATION */}
+            <div className="p-4 rounded-careq-md border border-blue-200 bg-blue-50/60 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                  <Languages className="w-3.5 h-3.5 text-blue-700" />
+                  2. {t('voice.englishTranslation', 'ENGLISH TRANSLATION')}
+                </span>
+                <span className="text-[10px] text-blue-800 font-semibold bg-blue-100 px-2 py-0.5 rounded">
+                  {t('voice.aiAssistedTranslation', 'AI-assisted translation')}
+                </span>
+              </div>
+              <p className="text-blue-950 font-medium italic bg-white p-3 rounded border border-blue-100">
+                "{englishTranslation}"
+              </p>
+            </div>
+
+            {/* 3. AI-GENERATED FIRST REPORT */}
+            <div className="p-4 rounded-careq-md border border-teal-200 bg-teal-50/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                  3. {t('voice.firstReportTitle', 'FIRST REPORT')} (Structured Clinical Summary)
+                </span>
+                <span className="text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                  Clinical Review Required
+                </span>
+              </div>
+              <div className="bg-white p-3 rounded border border-teal-100 space-y-1.5 text-slate-800 text-xs">
+                <p><strong>Reported Symptoms:</strong> {firstReportData.reportedSymptoms.join(', ')}</p>
+                <p><strong>Reported Duration:</strong> {firstReportData.reportedDuration}</p>
+                <p><strong>Patient Concerns:</strong> {firstReportData.reportedConcerns.join('; ')}</p>
+                <p className="text-[11px] text-slate-500"><strong>Information Not Provided:</strong> {firstReportData.missingInformation.join(' • ')}</p>
+              </div>
+            </div>
+
+            {/* 4. Extracted Lab Reports */}
             <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  3. {t('assessment.reportsSummaryTitle', 'Extracted Reports & Lab Findings')} ({uploadedReports.length})
+                  4. {t('assessment.reportsSummaryTitle', 'Extracted Reports & Lab Findings')} ({uploadedReports.length})
                 </span>
                 <button
                   onClick={() => setAssessmentStep(2)}
@@ -976,16 +1410,6 @@ export const NewAssessmentPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* 4. Translation for Clinician */}
-            <div className="p-4 rounded-careq-md border border-slate-200 bg-slate-50/60 space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
-                4. {t('assessment.englishTranslationNotice', 'Automated Clinical English Translation (for healthcare team):')}
-              </span>
-              <p className="text-slate-800 italic">
-                "{englishTranslation}"
-              </p>
             </div>
 
             {/* Legal / Consent Notice */}

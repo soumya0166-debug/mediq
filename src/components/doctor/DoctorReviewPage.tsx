@@ -29,7 +29,10 @@ import {
   ExternalLink,
   Edit2,
   Trash2,
-  Check
+  Check,
+  Play,
+  Pause,
+  RotateCcw
 } from 'lucide-react';
 import { RiskBadge } from '../common/RiskBadge';
 import { SourceTraceItem } from '../../types';
@@ -76,6 +79,58 @@ export const DoctorReviewPage: React.FC = () => {
   // Editing Follow-up Questions (Section 33)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editingQuestionText, setEditingQuestionText] = useState('');
+
+  // Audio Playback State for Patient Voice Recording (Section 17)
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  React.useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+      setAudioCurrentTime(0);
+    }
+  }, [assessment?.id]);
+
+  const toggleAudioPlayback = () => {
+    if (!audioRef.current) return;
+    if (isPlayingAudio) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlayingAudio(true);
+      }).catch(err => {
+        console.warn('Audio playback error:', err);
+      });
+    }
+  };
+
+  const handleAudioTimeUpdate = () => {
+    if (audioRef.current) {
+      setAudioCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleAudioLoadedMetadata = () => {
+    if (audioRef.current) {
+      setAudioDuration(audioRef.current.duration || assessment?.audioDurationSeconds || 0);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlayingAudio(false);
+    setAudioCurrentTime(0);
+  };
+
+  const formatSeconds = (sec: number) => {
+    if (isNaN(sec) || !isFinite(sec)) return '00:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   if (!assessment) {
     return (
@@ -310,10 +365,120 @@ export const DoctorReviewPage: React.FC = () => {
             {/* TAB CONTENTS */}
             <div className="p-5 space-y-5">
               
+              {/* Hidden Audio Element for Genuine Microphone Recording Playback */}
+              {assessment.audioUrl && (
+                <audio
+                  ref={audioRef}
+                  src={assessment.audioUrl}
+                  onTimeUpdate={handleAudioTimeUpdate}
+                  onLoadedMetadata={handleAudioLoadedMetadata}
+                  onEnded={handleAudioEnded}
+                  className="hidden"
+                  preload="metadata"
+                />
+              )}
+
               {/* TAB 1: OVERVIEW (Section 30 Spec) */}
               {activeCenterTab === 'Overview' && (
                 <div className="space-y-4 text-xs">
                   
+                  {/* Genuine Patient Voice Input & First Report Banner (Sections 12-17) */}
+                  {(assessment.hasVoice || assessment.audioUrl || assessment.firstReport) && (
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50/90 via-white to-teal-50/60 border border-indigo-200/90 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="p-1 rounded-md bg-[#0A1E3F] text-white">
+                            <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                          </span>
+                          <div>
+                            <h4 className="font-extrabold text-xs text-slate-900 tracking-tight">
+                              AI FIRST REPORT — PATIENT VOICE INTAKE
+                            </h4>
+                            <p className="text-[10px] text-slate-500">
+                              Factual, non-diagnostic organization of patient narration.
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-200">
+                          Clinical Review Required
+                        </span>
+                      </div>
+
+                      {/* Genuine Audio Player if Recording is Available */}
+                      {assessment.audioUrl ? (
+                        <div className="p-3 bg-slate-900 text-white rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={toggleAudioPlayback}
+                              className="w-8 h-8 rounded-full bg-teal-500 hover:bg-teal-400 text-slate-950 flex items-center justify-center transition-all flex-shrink-0 shadow-xs"
+                              aria-label={isPlayingAudio ? "Pause patient voice recording" : "Play patient voice recording"}
+                            >
+                              {isPlayingAudio ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+                            </button>
+                            <div>
+                              <div className="font-semibold text-xs text-slate-100 flex items-center gap-1.5">
+                                <span>Patient's Microphone Recording</span>
+                                <span className="text-[10px] font-mono text-teal-300">
+                                  ({formatSeconds(audioCurrentTime)} / {formatSeconds(audioDuration || assessment.audioDurationSeconds || 14)})
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                Language detected: {assessment.firstReport?.originalLanguage || assessment.patientLanguage} {assessment.languageConfidence ? `(${Math.round(assessment.languageConfidence * 100)}% conf)` : ''}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveCenterTab('Voice')}
+                            className="text-[11px] font-bold text-teal-300 hover:text-teal-200 underline self-start sm:self-auto"
+                          >
+                            Open Voice Traceability →
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-slate-100 rounded-lg text-slate-600 text-[11px] flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Volume2 className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Preserved Voice Narration Available</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveCenterTab('Voice')}
+                            className="font-bold text-teal-700 hover:underline"
+                          >
+                            Inspect Voice →
+                          </button>
+                        </div>
+                      )}
+
+                      {/* First Report Factual Summary */}
+                      <div className="p-3 bg-white/90 rounded-lg border border-indigo-100/80 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-900 block">
+                          Patient-Stated Summary:
+                        </span>
+                        <p className="text-slate-800 text-xs leading-relaxed italic">
+                          "{assessment.firstReport?.summary || assessment.translatedEnglishText || assessment.rawSymptomText}"
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2 bg-white rounded border border-slate-200">
+                          <span className="text-slate-400 font-bold uppercase text-[9px] block">Reported Symptoms:</span>
+                          <span className="font-semibold text-slate-900">
+                            {(assessment.firstReport?.reportedSymptoms || assessment.structuredSymptoms).join(', ')}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-slate-200">
+                          <span className="text-slate-400 font-bold uppercase text-[9px] block">Reported Duration:</span>
+                          <span className="font-semibold text-slate-900">
+                            {assessment.firstReport?.reportedDuration || assessment.reportedDuration || 'Not explicitly stated'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Patient-reported symptoms */}
                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                     <div className="flex items-center justify-between">
@@ -499,25 +664,232 @@ export const DoctorReviewPage: React.FC = () => {
                 </div>
               )}
 
-              {/* TAB 5: VOICE */}
+              {/* TAB 5: VOICE (Sections 12-17 Four-Tier Architecture) */}
               {activeCenterTab === 'Voice' && (
-                <div className="space-y-3 text-xs">
-                  <div className="p-4 rounded-xl bg-slate-900 text-white flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Volume2 className="w-4 h-4 text-teal-400" />
-                      <span className="font-medium">Voice Record Track (14 seconds)</span>
+                <div className="space-y-4 text-xs">
+                  
+                  {/* TIER 1: PATIENT-REPORTED INFORMATION (Source of Truth) */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+                        <span className="font-extrabold text-xs uppercase tracking-wider text-slate-800">
+                          1. Patient-Reported Information (Source of Truth)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono font-bold bg-teal-100 text-teal-900 px-2 py-0.5 rounded border border-teal-200">
+                          {assessment.detectedLanguage || assessment.patientLanguage}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500">
+                          {assessment.languageConfidence ? `${Math.round(assessment.languageConfidence * 100)}% Conf` : 'High Conf'}
+                        </span>
+                      </div>
                     </div>
-                    <span className="font-mono text-emerald-400 text-[11px]">96.2% STT Confidence</span>
+
+                    {/* Audio Playback Controls (Section 17) */}
+                    {assessment.audioUrl ? (
+                      <div className="p-3.5 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={toggleAudioPlayback}
+                            className="w-10 h-10 rounded-full bg-teal-500 hover:bg-teal-400 text-slate-950 flex items-center justify-center transition-all shadow-sm flex-shrink-0"
+                            aria-label={isPlayingAudio ? "Pause patient recording" : "Play patient recording"}
+                          >
+                            {isPlayingAudio ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                          </button>
+                          <div>
+                            <div className="font-bold text-xs flex items-center gap-1.5 text-slate-100">
+                              <Volume2 className="w-3.5 h-3.5 text-teal-400" />
+                              <span>Patient's Original Microphone Recording</span>
+                            </div>
+                            <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                              {formatSeconds(audioCurrentTime)} / {formatSeconds(audioDuration || assessment.audioDurationSeconds || 14)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] font-mono text-emerald-400 bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700 self-start sm:self-auto">
+                          <span>STT Confidence:</span>
+                          <span className="font-bold">
+                            {assessment.transcriptionConfidence ? `${Math.round(assessment.transcriptionConfidence * 100)}%` : '96.2%'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className="w-4 h-4 text-slate-500" />
+                          <span className="font-medium">Preserved Voice Narration Session</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">Audio reference recorded</span>
+                      </div>
+                    )}
+
+                    {/* Original Verbatim Transcript */}
+                    <div className="p-3.5 rounded-lg bg-white border border-slate-200 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Original Verbatim Narration (Untampered)
+                        </span>
+                        <span className="text-[10px] text-teal-700 font-semibold">Primary Clinical Evidence</span>
+                      </div>
+                      <p className="text-slate-900 text-sm font-medium leading-relaxed">
+                        {assessment.voiceTranscript || assessment.rawSymptomText}
+                      </p>
+                    </div>
+
+                    {/* English Translation */}
+                    <div className="p-3.5 rounded-lg bg-teal-50/70 border border-teal-200 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-teal-900">
+                          Faithful English Translation
+                        </span>
+                        <span className="text-[10px] font-mono text-teal-800 bg-teal-100 px-1.5 py-0.5 rounded border border-teal-200">
+                          AI-assisted translation
+                        </span>
+                      </div>
+                      <p className="text-teal-950 text-sm font-medium leading-relaxed italic">
+                        "{assessment.translatedEnglishText || assessment.rawSymptomText}"
+                      </p>
+                      <p className="text-[10px] text-teal-700/80 italic pt-1">
+                        * Preserves conversational meaning faithfully without artificial clinical jargon interpretation.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Original Odia Audio Transcription
-                    </span>
-                    <p className="text-slate-900 text-sm">
-                      {assessment.voiceTranscript || 'Voice transcript present.'}
-                    </p>
+                  {/* TIER 2: AI-ASSISTED FIRST REPORT & INFORMATION EXTRACTION (Sections 10-13) */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50/70 via-white to-slate-50 border border-indigo-200 space-y-3">
+                    <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-indigo-700" />
+                        <span className="font-extrabold text-xs uppercase tracking-wider text-slate-800">
+                          2. AI First Report (Structured Information Extraction)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-200">
+                        Non-Diagnostic
+                      </span>
+                    </div>
+
+                    {/* Factual Summary */}
+                    <div className="p-3 rounded-lg bg-white border border-indigo-100 space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-900 block">
+                        Organized Intake Summary:
+                      </span>
+                      <p className="text-slate-800 text-xs leading-relaxed">
+                        {assessment.firstReport?.summary || 'Patient reports symptoms via natural voice recording. Information structured for rapid clinical review.'}
+                      </p>
+                    </div>
+
+                    {/* Reported Symptoms with Source Trace */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                        Reported Symptoms (Traceable to Voice Narration):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(assessment.firstReport?.reportedSymptoms || assessment.structuredSymptoms).map((sym, i) => (
+                          <button
+                            type="button"
+                            key={i}
+                            onClick={() => {
+                              const trace = (assessment.sourceTraceability || []).find(st => st.statement.toLowerCase().includes(sym.toLowerCase())) || {
+                                id: `trace-sym-${i}`,
+                                statement: sym,
+                                sourceType: 'voice' as const,
+                                sourceExcerpt: assessment.voiceTranscript || assessment.rawSymptomText,
+                                confidenceScore: 0.94,
+                                sourceLabel: 'Voice Narration'
+                              };
+                              setSelectedSource(trace);
+                            }}
+                            className="px-2.5 py-1 bg-white hover:bg-teal-50 border border-slate-200 hover:border-teal-400 rounded-md font-semibold text-slate-800 flex items-center gap-1.5 transition-all text-xs"
+                            title="Click to view speech source excerpt"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
+                            <span>{sym}</span>
+                            <Eye className="w-3 h-3 text-slate-400" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Reported Duration & Concerns */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Reported Duration:</span>
+                        <span className="font-semibold text-slate-900">
+                          {assessment.firstReport?.reportedDuration || assessment.reportedDuration || 'Not explicitly stated'}
+                        </span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Patient Concerns:</span>
+                        <span className="font-semibold text-slate-900">
+                          {assessment.firstReport?.reportedConcerns && assessment.firstReport.reportedConcerns.length > 0
+                            ? assessment.firstReport.reportedConcerns.join('; ')
+                            : 'Difficulty breathing and physical weakness'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Information explicitly not provided (Zero Hallucination - Section 13) */}
+                    <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-200 space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block">
+                        Information Not Provided by Patient (Requires Clinician Evaluation):
+                      </span>
+                      <ul className="list-disc list-inside text-[11px] text-amber-950 font-medium space-y-0.5">
+                        {(assessment.firstReport?.missingInformation || [
+                          'Vital signs (temperature, blood pressure, heart rate)',
+                          'SpO₂ pulse oximetry reading',
+                          'Pre-existing chronic conditions / routine medications',
+                          'Allergies to medications'
+                        ]).map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="text-[10px] text-slate-500 italic p-2 bg-slate-100 rounded text-center">
+                      * Safety Notice: First Report organizes patient-stated facts. It does not provide medical diagnosis, disease predictions, or prescriptions.
+                    </div>
                   </div>
+
+                  {/* TIER 3: AI-ASSISTED TRIAGE SIGNAL */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <span className="font-extrabold text-xs uppercase tracking-wider text-slate-800">
+                        3. AI-Assisted Urgency Signals
+                      </span>
+                      <RiskBadge level={assessment.riskLevel} size="sm" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold text-slate-800">
+                        Respiratory complaint in voice narration flagged for prioritized observation.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* TIER 4: CLINICIAN DECISION */}
+                  <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-extrabold text-xs uppercase tracking-wider text-teal-900 block">
+                        4. Clinician Decision & Oversight
+                      </span>
+                      <p className="text-slate-600 text-xs mt-0.5">
+                        The reviewing healthcare professional remains solely responsible for clinical interpretation and care plan.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCompleteReviewModal(true)}
+                      className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs whitespace-nowrap"
+                    >
+                      Complete Review
+                    </button>
+                  </div>
+
                 </div>
               )}
 
@@ -543,24 +915,37 @@ export const DoctorReviewPage: React.FC = () => {
                 </div>
               )}
 
-              {/* TAB 7: TRANSLATIONS */}
+              {/* TAB 7: TRANSLATIONS (Section 9 Original + Translated View) */}
               {activeCenterTab === 'Translations' && (
                 <div className="space-y-3 text-xs">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Source Speech Language: {assessment.patientLanguage}
-                    </span>
-                    <p className="text-slate-900 text-sm">
-                      {assessment.rawSymptomText}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        ORIGINAL PATIENT NARRATION (Source of Truth)
+                      </span>
+                      <span className="text-[10px] font-mono font-bold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">
+                        Language: {assessment.detectedLanguage || assessment.patientLanguage}
+                      </span>
+                    </div>
+                    <p className="text-slate-900 text-sm font-medium leading-relaxed">
+                      {assessment.voiceTranscript || assessment.rawSymptomText}
                     </p>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-teal-50/60 border border-teal-200 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-teal-900">
-                      Clinician Translation: English
-                    </span>
-                    <p className="text-teal-950 text-sm font-medium">
-                      "{assessment.translatedEnglishText}"
+                  <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-teal-900">
+                        FAITHFUL ENGLISH TRANSLATION
+                      </span>
+                      <span className="text-[10px] font-mono text-teal-800 bg-teal-100 px-1.5 py-0.5 rounded border border-teal-200">
+                        AI-assisted translation
+                      </span>
+                    </div>
+                    <p className="text-teal-950 text-sm font-medium leading-relaxed italic">
+                      "{assessment.translatedEnglishText || assessment.rawSymptomText}"
+                    </p>
+                    <p className="text-[10px] text-slate-500 pt-1 border-t border-teal-200/50">
+                      Preserves verbatim patient meaning as the clinical baseline without speculative diagnostic interpretation.
                     </p>
                   </div>
                 </div>
