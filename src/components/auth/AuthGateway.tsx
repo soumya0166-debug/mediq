@@ -25,8 +25,8 @@ export const AuthGateway: React.FC = () => {
   const { sendEmailOtp, verifyEmailOtp, loginWithVerifiedSession, navigate } = useApp();
   const { t } = useLanguage();
 
-  // Gateway Stages: 'REQUEST_OTP' | 'VERIFY_OTP' | 'SELECT_WORKSPACE'
-  const [gatewayStage, setGatewayStage] = useState<'REQUEST_OTP' | 'VERIFY_OTP' | 'SELECT_WORKSPACE'>('REQUEST_OTP');
+  // Gateway Stages: 'REQUEST_OTP' | 'VERIFY_OTP' | 'SELECT_WORKSPACE' | 'SIGN_UP_CHOICE'
+  const [gatewayStage, setGatewayStage] = useState<'REQUEST_OTP' | 'VERIFY_OTP' | 'SELECT_WORKSPACE' | 'SIGN_UP_CHOICE'>('REQUEST_OTP');
 
   // Input States
   const [emailInput, setEmailInput] = useState('riya.das.demo@careq-health.org');
@@ -229,11 +229,45 @@ export const AuthGateway: React.FC = () => {
           </div>
         </div>
 
+        {/* Sign In vs Sign Up Tabs */}
+        {gatewayStage !== 'VERIFY_OTP' && gatewayStage !== 'SELECT_WORKSPACE' && (
+          <div className="flex border-b border-slate-200">
+            <button
+              type="button"
+              onClick={() => {
+                setGatewayStage('REQUEST_OTP');
+                setErrorMessage(null);
+              }}
+              className={`flex-1 py-3 text-center text-xs font-bold transition-all border-b-2 ${
+                gatewayStage === 'REQUEST_OTP'
+                  ? 'border-[#0A1E3F] text-[#0A1E3F]'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {t('auth.signInTab') || 'Sign In'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setGatewayStage('SIGN_UP_CHOICE');
+                setErrorMessage(null);
+              }}
+              className={`flex-1 py-3 text-center text-xs font-bold transition-all border-b-2 ${
+                gatewayStage === 'SIGN_UP_CHOICE'
+                  ? 'border-[#0A1E3F] text-[#0A1E3F]'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {t('auth.signUpTab') || 'Create Account'}
+            </button>
+          </div>
+        )}
+
         {/* Card Body */}
         <div className="p-6 sm:p-8 space-y-6">
 
           {/* ========================================================= */}
-          {/* STAGE 1: REQUEST OTP                                      */}
+          {/* STAGE 1: REQUEST OTP (SIGN IN)                            */}
           {/* ========================================================= */}
           {gatewayStage === 'REQUEST_OTP' && (
             <div className="space-y-6 animate-in fade-in duration-200">
@@ -351,12 +385,119 @@ export const AuthGateway: React.FC = () => {
                 </div>
               </div>
 
+              {/* Don't have an account? Sign up link */}
+              <div className="pt-2 text-center text-xs text-slate-600 border-t border-slate-100">
+                <span>{t('auth.newToCareqPrompt') || "Don't have an account?"} </span>
+                <button
+                  type="button"
+                  onClick={() => setGatewayStage('SIGN_UP_CHOICE')}
+                  className="font-bold text-teal-800 hover:text-teal-950 underline inline-flex items-center gap-0.5"
+                >
+                  <span>{t('auth.createAccountLink') || 'Sign up here'}</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
               {/* Security Privacy Notice */}
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-[11px] text-slate-500 leading-relaxed flex items-start gap-2">
                 <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
                 <span>
                   {t('auth.gatewaySecurityNote') || 'All sessions are end-to-end encrypted, role-isolated, and audited under Digital Health Security Standards.'}
                 </span>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE: SIGN UP CHOICE                                     */}
+          {/* ========================================================= */}
+          {gatewayStage === 'SIGN_UP_CHOICE' && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              
+              <div className="space-y-1 text-center">
+                <h2 className="text-xl font-extrabold text-[#0A1E3F] tracking-tight">
+                  {t('auth.signUpTitle') || 'Create your CAREQ Account'}
+                </h2>
+                <p className="text-xs text-slate-600">
+                  {t('auth.signUpSubtitle') || 'Select your healthcare role to start registration'}
+                </p>
+              </div>
+
+              {/* Registration Option 1: Patient */}
+              <div 
+                onClick={() => navigate('/register/patient')}
+                className="p-4 rounded-xl border border-slate-200 hover:border-teal-500 bg-white hover:bg-teal-50/30 transition-all cursor-pointer shadow-xs hover:shadow-md group space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center text-teal-800 group-hover:bg-teal-800 group-hover:text-white transition-colors">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-[#0A1E3F] group-hover:text-teal-900">
+                        {t('auth.patientRoleTitle') || 'Patient / Family Caregiver'}
+                      </div>
+                      <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                        Personal Health Access
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-800 group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed pl-11">
+                  {t('auth.patientSignUpDesc') || 'Submit voice assessments, manage records locker, and control clinical data sharing consent.'}
+                </p>
+                <div className="pt-1 pl-11">
+                  <span className="text-xs font-bold text-teal-800 group-hover:underline inline-flex items-center gap-1">
+                    <span>{t('auth.registerPatientBtn') || 'Register as Patient'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </div>
+
+              {/* Registration Option 2: Healthcare Professional */}
+              <div 
+                onClick={() => navigate('/register/doctor')}
+                className="p-4 rounded-xl border border-slate-200 hover:border-indigo-500 bg-white hover:bg-indigo-50/30 transition-all cursor-pointer shadow-xs hover:shadow-md group space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-800 group-hover:bg-indigo-800 group-hover:text-white transition-colors">
+                      <Stethoscope className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-[#0A1E3F] group-hover:text-indigo-900">
+                        {t('auth.clinicalRoleTitle') || 'Healthcare Worker / Clinician'}
+                      </div>
+                      <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                        Accredited Clinical Review
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-800 group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed pl-11">
+                  {t('auth.clinicianSignUpDesc') || 'Access emergency triage queue, verify medical council ID, and generate structured referrals.'}
+                </p>
+                <div className="pt-1 pl-11">
+                  <span className="text-xs font-bold text-indigo-800 group-hover:underline inline-flex items-center gap-1">
+                    <span>{t('auth.registerDoctorBtn') || 'Register as Healthcare Professional'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom toggle back to Sign In */}
+              <div className="pt-2 text-center text-xs text-slate-600 border-t border-slate-100">
+                <span>{t('auth.alreadyHaveAccountPrompt') || 'Already have an account?'} </span>
+                <button
+                  type="button"
+                  onClick={() => setGatewayStage('REQUEST_OTP')}
+                  className="font-bold text-teal-800 hover:text-teal-950 underline"
+                >
+                  {t('auth.signInEmailOtpLink') || 'Sign in with Email OTP'}
+                </button>
               </div>
 
             </div>

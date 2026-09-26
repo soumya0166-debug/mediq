@@ -244,12 +244,20 @@ export const Navbar: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => navigate('/auth')}
-                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#0A1E3F] text-white hover:bg-[#163B66] transition-colors"
-              >
-                {t('auth.signInBtn')}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/auth')}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-800 transition-colors"
+                >
+                  {t('auth.signInBtn')}
+                </button>
+                <button
+                  onClick={() => navigate('/register/patient')}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#0A1E3F] text-white hover:bg-[#163B66] transition-colors shadow-2xs"
+                >
+                  {t('auth.signUpBtn') || 'Sign Up'}
+                </button>
+              </div>
             )}
 
           </div>

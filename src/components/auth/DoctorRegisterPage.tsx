@@ -62,7 +62,26 @@ export const DoctorRegisterPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12 space-y-6">
       
-      {/* Header */}
+      {/* Top Navigation Links */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => navigate('/auth')}
+          className="text-teal-800 hover:text-teal-950 font-bold flex items-center gap-1.5 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{t('auth.alreadyHaveAccountPrompt') || 'Already have an account?'} <u>{t('auth.signInEmailOtpLink') || 'Sign In'}</u></span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/register/patient')}
+          className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 transition-colors"
+        >
+          <span>{t('auth.registerPatientBtn') || 'Register as Patient'}</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
       <div className="text-center space-y-1">
         <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded">
           {t('auth.clinicalRoleTitle')}
