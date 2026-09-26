@@ -21,6 +21,7 @@ import {
 export const Navbar: React.FC = () => {
   const { 
     currentRole, 
+    currentSession,
     isPatient,
     currentPatient, 
     currentDoctor, 
@@ -35,7 +36,7 @@ export const Navbar: React.FC = () => {
 
   const { t } = useLanguage();
 
-  const isAuthPage = currentRoute.startsWith('/login') || currentRoute.startsWith('/register') || currentRoute.startsWith('/verify');
+  const isAuthPage = !currentSession || currentRoute.startsWith('/login') || currentRoute.startsWith('/register') || currentRoute.startsWith('/verify') || currentRoute === '/auth';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -45,7 +46,7 @@ export const Navbar: React.FC = () => {
           {/* Brand & Identity */}
           <div 
             className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none flex-shrink-0" 
-            onClick={() => navigate(isPatient ? '/patient/dashboard' : '/clinical/dashboard')}
+            onClick={() => navigate(currentSession ? (isPatient ? '/patient/dashboard' : '/clinical/dashboard') : '/auth')}
           >
             <div className="w-9 h-9 rounded-lg bg-[#0A1E3F] flex items-center justify-center text-white shadow-2xs">
               <Activity className="w-5 h-5 text-teal-400 stroke-[2.4]" />
@@ -244,7 +245,7 @@ export const Navbar: React.FC = () => {
               </div>
             ) : (
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/auth')}
                 className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#0A1E3F] text-white hover:bg-[#163B66] transition-colors"
               >
                 {t('auth.signInBtn')}

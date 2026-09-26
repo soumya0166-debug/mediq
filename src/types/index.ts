@@ -138,9 +138,14 @@ export interface EmailOtpVerifyResponse {
   message?: string;
   sessionToken?: string;
   role?: UserRole;
+  verifiedRoles?: UserRole[];
+  userId?: string;
+  identityId?: string;
+  email?: string;
   patientId?: string;
   professionalId?: string;
   userName?: string;
+  permissions?: string[];
   attemptsRemaining?: number;
 }
 
@@ -440,7 +445,13 @@ export type AuditEventType =
   | 'EMAIL_OTP_SENT'
   | 'EMAIL_OTP_VERIFIED'
   | 'EMAIL_OTP_FAILED'
-  | 'RATE_LIMIT_TRIGGERED';
+  | 'RATE_LIMIT_TRIGGERED'
+  | 'AUTH_EMAIL_OTP_REQUESTED'
+  | 'AUTH_EMAIL_OTP_VERIFIED'
+  | 'AUTH_EMAIL_OTP_FAILED'
+  | 'AUTH_SESSION_CREATED'
+  | 'AUTH_SESSION_TERMINATED'
+  | 'AUTH_UNAUTHORIZED_ACCESS_ATTEMPT';
 
 export interface AuditEvent {
   id: string;

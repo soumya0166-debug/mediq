@@ -7,6 +7,7 @@ import { PrivacyModal } from './components/common/PrivacyModal';
 import { DemoGuideModal } from './components/common/DemoGuideModal';
 
 // Auth Pages
+import { AuthGateway } from './components/auth/AuthGateway';
 import { LoginPage } from './components/auth/LoginPage';
 import { PatientRegisterPage } from './components/auth/PatientRegisterPage';
 import { DoctorRegisterPage } from './components/auth/DoctorRegisterPage';
@@ -41,8 +42,22 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { LanguageWelcomeModal } from './components/common/LanguageWelcomeModal';
 
 const AppContent: React.FC = () => {
-  const { currentRoute, currentRole, navigate, setSelectedAssessmentId } = useApp();
+  const { currentRoute, currentRole, currentSession, navigate, setSelectedAssessmentId } = useApp();
   const { t } = useLanguage();
+
+  // URL bypass guard: redirect unauthenticated users hitting protected routes directly to /auth
+  useEffect(() => {
+    if (!currentSession) {
+      if (
+        currentRoute !== '/auth' && 
+        currentRoute !== '/login' && 
+        !currentRoute.startsWith('/register') && 
+        currentRoute !== '/verify'
+      ) {
+        navigate('/auth');
+      }
+    }
+  }, [currentSession, currentRoute, navigate]);
 
   // Auto-sync selectedAssessmentId when navigating to a patient review route
   useEffect(() => {
@@ -55,15 +70,31 @@ const AppContent: React.FC = () => {
     }
   }, [currentRoute, setSelectedAssessmentId]);
 
-  // Route parser with strict role separation (Sections 5, 6, 12, 19, 28, 29)
+  // Route parser with strict role separation (Sections 1, 5, 6, 7, 8, 9)
   const renderRoute = () => {
-    // Auth Routes
-    if (currentRoute === '/login') return <LoginPage />;
+    // 1. Unauthenticated Gateway Barrier (Sections 1, 9)
+    if (!currentSession) {
+      if (currentRoute === '/register/patient') return <PatientRegisterPage />;
+      if (currentRoute === '/register/doctor') return <DoctorRegisterPage />;
+      if (currentRoute === '/verify') return <VerifyPage />;
+      // Any attempt to access dashboards or auth routes renders the Auth Gateway
+      return <AuthGateway />;
+    }
+
+    // 2. Authenticated Session: If visiting /auth or /login, redirect into authorized workspace
+    if (currentRoute === '/auth' || currentRoute === '/login') {
+      if (currentRole === 'HEALTHCARE_PROFESSIONAL') {
+        return <DoctorLayout><DoctorDashboard /></DoctorLayout>;
+      }
+      return <PatientDashboard />;
+    }
+
+    // Public / registration routes
     if (currentRoute === '/register/patient') return <PatientRegisterPage />;
     if (currentRoute === '/register/doctor') return <DoctorRegisterPage />;
     if (currentRoute === '/verify') return <VerifyPage />;
 
-    // Patient Routes
+    // 3. Patient Routes (Section 7, 9)
     if (currentRoute === '/' || currentRoute.startsWith('/patient')) {
       // Strict Access Restriction: Clinicians must NOT enter patient self-service without switching workspaces
       if (currentRole !== 'PATIENT') {
@@ -79,7 +110,7 @@ const AppContent: React.FC = () => {
       return <PatientDashboard />;
     }
 
-    // Clinical / Healthcare Professional Routes (Nested in DoctorLayout)
+    // 4. Clinical / Healthcare Professional Routes (Section 8, 9)
     if (currentRoute.startsWith('/clinical') || currentRoute.startsWith('/doctor')) {
       // Strict Access Restriction: Patients must NOT have access to healthcare dashboard
       if (currentRole !== 'HEALTHCARE_PROFESSIONAL') {
@@ -107,7 +138,7 @@ const AppContent: React.FC = () => {
     return currentRole === 'PATIENT' ? <PatientDashboard /> : <DoctorLayout><DoctorDashboard /></DoctorLayout>;
   };
 
-  const isPatientRoute = currentRole === 'PATIENT' && !currentRoute.startsWith('/login') && !currentRoute.startsWith('/register');
+  const isPatientRoute = Boolean(currentSession) && currentRole === 'PATIENT' && !currentRoute.startsWith('/login') && !currentRoute.startsWith('/register') && currentRoute !== '/auth';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-teal-700 selection:text-white pb-16 md:pb-0">

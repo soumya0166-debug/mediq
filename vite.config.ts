@@ -695,6 +695,64 @@ function careqOtpAuthPlugin() {
         }));
       };
 
+      // 0.1 Session Validation Endpoint: GET /auth/session or /api/auth/session
+      const handleSessionCheck = (req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        const authHeader = req.headers['authorization'];
+        const sessionHeader = req.headers['x-careq-session-id'];
+
+        let token = sessionHeader || '';
+        if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.slice(7).trim();
+        }
+        if (!token && req.headers.cookie) {
+          const match = req.headers.cookie.match(/careq_session_token=([^;]+)/);
+          if (match) token = match[1];
+        }
+
+        if (!token) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ success: false, authenticated: false, code: 'UNAUTHENTICATED' }));
+          return;
+        }
+
+        const session = activeSessionsStore.get(token);
+        if (!session || Date.now() > session.expiresAt) {
+          if (session) activeSessionsStore.delete(token);
+          res.statusCode = 401;
+          res.end(JSON.stringify({ success: false, authenticated: false, code: 'SESSION_EXPIRED' }));
+          return;
+        }
+
+        res.statusCode = 200;
+        res.end(JSON.stringify({
+          success: true,
+          authenticated: true,
+          sessionToken: session.sessionId,
+          role: session.role,
+          verifiedRoles: session.verifiedRoles,
+          userId: session.userId,
+          identityId: session.identityId,
+          patientId: session.account.patientId,
+          professionalId: session.account.professionalId,
+          userName: session.account.name,
+          permissions: session.permissions,
+          authAssuranceLevel: session.authAssuranceLevel
+        }));
+      };
+
+      // 0.2 Logout Endpoint: POST /auth/logout or /api/auth/logout
+      const handleLogout = (req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        const sessionHeader = req.headers['x-careq-session-id'];
+        if (sessionHeader && activeSessionsStore.has(sessionHeader)) {
+          activeSessionsStore.delete(sessionHeader);
+        }
+        res.setHeader('Set-Cookie', 'careq_session_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+        res.statusCode = 200;
+        res.end(JSON.stringify({ success: true, message: 'Logged out successfully.' }));
+      };
+
       // 1. EMAIL OTP REQUEST: POST /auth/login/request-otp (and aliases)
       const handleEmailOtpRequest = async (req: any, res: any) => {
         res.setHeader('Content-Type', 'application/json');
@@ -922,13 +980,15 @@ function careqOtpAuthPlugin() {
             account
           });
 
-          // Return only necessary session information
+          // Return only necessary session information and set secure cookie
+          res.setHeader('Set-Cookie', `careq_session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800`);
           res.statusCode = 200;
           res.end(JSON.stringify({
             success: true,
             verified: true,
             sessionToken,
             role,
+            verifiedRoles: account.verifiedRoles,
             email: account.email,
             userId: account.userId,
             patientId: account.patientId,
@@ -1237,22 +1297,32 @@ function careqOtpAuthPlugin() {
       server.middlewares.use((req: any, res: any, next: any) => {
         const url = req.url?.split('?')[0] || '';
 
-        // 1. Config status
+        // 0. Config status
         if ((url === '/auth/config-status' || url === '/api/auth/config-status') && req.method === 'GET') {
           return handleConfigStatus(req, res);
         }
 
-        // 2. Email OTP Request: POST /auth/login/request-otp (and aliases)
+        // 0.1 Session Check
+        if ((url === '/auth/session' || url === '/api/auth/session') && req.method === 'GET') {
+          return handleSessionCheck(req, res);
+        }
+
+        // 0.2 Logout
+        if ((url === '/auth/logout' || url === '/api/auth/logout') && req.method === 'POST') {
+          return handleLogout(req, res);
+        }
+
+        // 2. Email OTP Request: POST /auth/email/request, /auth/login/request-otp (and aliases)
         if (
-          (url === '/auth/login/request-otp' || url === '/api/auth/login/request-otp' || url === '/api/auth/email/send-otp') &&
+          (url === '/auth/email/request' || url === '/api/auth/email/request' || url === '/auth/login/request-otp' || url === '/api/auth/login/request-otp' || url === '/api/auth/email/send-otp') &&
           req.method === 'POST'
         ) {
           return handleEmailOtpRequest(req, res);
         }
 
-        // 3. Email OTP Verify: POST /auth/login/verify-otp (and aliases)
+        // 3. Email OTP Verify: POST /auth/email/verify, /auth/login/verify-otp (and aliases)
         if (
-          (url === '/auth/login/verify-otp' || url === '/api/auth/login/verify-otp' || url === '/api/auth/email/verify-otp') &&
+          (url === '/auth/email/verify' || url === '/api/auth/email/verify' || url === '/auth/login/verify-otp' || url === '/api/auth/login/verify-otp' || url === '/api/auth/email/verify-otp') &&
           req.method === 'POST'
         ) {
           return handleEmailOtpVerify(req, res);

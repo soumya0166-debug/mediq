@@ -84,6 +84,7 @@ interface AppContextType {
   setSelectedAssessmentId: (id: string | null) => void;
   loginAsPatient: (patientId?: string) => void;
   loginAsDoctor: (doctorId?: string) => void;
+  loginWithVerifiedSession: (data: EmailOtpVerifyResponse, chosenRole?: UserRole) => void;
   logout: () => void;
   openWorkspaceSwitcher: (targetRole?: UserRole) => void;
   setWorkspaceSwitchModalOpen: (open: boolean) => void;
@@ -122,26 +123,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [patientIdentity, setPatientIdentity] = useState<PatientIdentity | null>(DEFAULT_PATIENT_IDENTITY);
   const [professionalIdentity, setProfessionalIdentity] = useState<ProfessionalIdentity | null>(DEFAULT_PROFESSIONAL_IDENTITY);
   
-  // Role-scoped session isolation (Section 17)
+  // Role-scoped session isolation (Section 17) - hydrated from secure storage or null
   const [currentSession, setCurrentSession] = useState<AuthSession | null>(() => {
-    return {
-      sessionId: 'SES-INIT-PAT-9042',
-      userId: 'USR-DEMO-001',
-      role: 'PATIENT',
-      identityId: 'PAT-2026-00124',
-      permissions: PATIENT_PERMISSIONS,
-      issuedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
-      verifiedRoles: ['PATIENT', 'HEALTHCARE_PROFESSIONAL'],
-      patientIdentity: DEFAULT_PATIENT_IDENTITY,
-      professionalIdentity: DEFAULT_PROFESSIONAL_IDENTITY
-    };
+    try {
+      const saved = sessionStorage.getItem('careq_session');
+      if (saved) {
+        const parsed: AuthSession = JSON.parse(saved);
+        if (parsed.expiresAt && new Date(parsed.expiresAt) > new Date()) {
+          return parsed;
+        }
+        sessionStorage.removeItem('careq_session');
+      }
+    } catch {
+      sessionStorage.removeItem('careq_session');
+    }
+    return null;
   });
 
-  const [currentRole, setCurrentRole] = useState<UserRole>('PATIENT');
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => currentSession?.role || 'PATIENT');
   const [currentFacility, setCurrentFacility] = useState<string>('CAREQ Demo Primary Health Centre, Jatni');
   const [facilityId, setFacilityId] = useState<string>('FAC-DEMO-OD-001');
-  const [currentRoute, setCurrentRoute] = useState<string>('/patient/dashboard');
+  const [currentRoute, setCurrentRoute] = useState<string>(() => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/auth';
+    const hasSession = typeof window !== 'undefined' && Boolean(sessionStorage.getItem('careq_session'));
+    if (!hasSession) {
+      return (path.startsWith('/register') || path.startsWith('/verify')) ? path : '/auth';
+    }
+    return path === '/' ? '/patient/dashboard' : path;
+  });
   
   // Workspace Switch Modal State
   const [isWorkspaceSwitchModalOpen, setWorkspaceSwitchModalOpen] = useState(false);
@@ -149,7 +158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const isPatient = currentRole === 'PATIENT';
   const isProfessional = currentRole === 'HEALTHCARE_PROFESSIONAL';
-  const verifiedRoles: UserRole[] = currentSession?.verifiedRoles || ['PATIENT', 'HEALTHCARE_PROFESSIONAL'];
+  const verifiedRoles: UserRole[] = currentSession?.verifiedRoles || (currentRole === 'HEALTHCARE_PROFESSIONAL' ? ['HEALTHCARE_PROFESSIONAL'] : ['PATIENT']);
 
   const [assessments, setAssessments] = useState<Assessment[]>(() => {
     const saved = localStorage.getItem('careq_assessments');
@@ -166,6 +175,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [isDemoGuideOpen, setDemoGuideOpen] = useState(false);
   const [demoGuideStep, setDemoGuideStep] = useState(1);
+
+  // Validate active session token against server on initial mount
+  useEffect(() => {
+    const validateServerSession = async () => {
+      const saved = sessionStorage.getItem('careq_session');
+      if (!saved) return;
+      try {
+        const parsed: AuthSession = JSON.parse(saved);
+        if (!parsed.sessionId) return;
+        const res = await fetch('/auth/session', {
+          headers: { 'Authorization': `Bearer ${parsed.sessionId}` }
+        });
+        const data = await res.json();
+        if (!data.authenticated) {
+          sessionStorage.removeItem('careq_session');
+          setCurrentSession(null);
+          setCurrentRoute('/auth');
+        }
+      } catch {
+        // Offline / network failure: allow active unexpired session token to persist
+      }
+    };
+    validateServerSession();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('careq_assessments', JSON.stringify(assessments));
@@ -187,7 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const isAuthorizedForRoute = (route: string): boolean => {
     if (!currentSession) {
-      return route.startsWith('/login') || route.startsWith('/register') || route.startsWith('/verify');
+      return route === '/auth' || route.startsWith('/login') || route.startsWith('/register') || route.startsWith('/verify');
     }
     if (currentSession.role === 'PATIENT') {
       return !route.startsWith('/clinical') && !route.startsWith('/doctor');
@@ -392,21 +425,114 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     navigate('/clinical/dashboard');
   };
 
-  const logout = () => {
+  const logout = async () => {
     const actorName = currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor');
     const actorRole = currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker';
-    const eventType: AuditEventType = currentRole === 'PATIENT' ? 'PATIENT_LOGOUT' : 'PROFESSIONAL_LOGOUT';
+    
+    if (currentSession?.sessionId) {
+      try {
+        await fetch('/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSession.sessionId}`
+          },
+          body: JSON.stringify({ sessionId: currentSession.sessionId })
+        });
+      } catch {
+        // network failure; continue local signout
+      }
+    }
+
     addAuditEvent(
       'Session Terminated / Sign Out',
       actorName,
       actorRole,
-      `User signed out. Role-scoped session invalidated and temporary state purged.`,
+      `User signed out. Authenticated session token invalidated on server. Role-scoped memory and cache cleared.`,
       undefined,
-      eventType
+      'AUTH_SESSION_TERMINATED'
     );
+    sessionStorage.removeItem('careq_session');
     setCurrentSession(null);
     setSelectedAssessmentId(null);
-    navigate('/login');
+    navigate('/auth');
+  };
+
+  const loginWithVerifiedSession = (data: EmailOtpVerifyResponse, chosenRole?: UserRole) => {
+    const effectiveRole: UserRole = chosenRole || (data.role === 'HEALTHCARE_PROFESSIONAL' ? 'HEALTHCARE_PROFESSIONAL' : 'PATIENT');
+    const effectiveRoles: UserRole[] = data.verifiedRoles && data.verifiedRoles.length > 0
+      ? data.verifiedRoles
+      : (data.role === 'HEALTHCARE_PROFESSIONAL' ? ['HEALTHCARE_PROFESSIONAL'] : ['PATIENT']);
+
+    const newSessionId = data.sessionToken || `SES-EML-${Date.now().toString(36).toUpperCase()}`;
+    const newPermissions = effectiveRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
+
+    let patIdent = patientIdentity;
+    let profIdent = professionalIdentity;
+
+    if (effectiveRole === 'PATIENT') {
+      patIdent = {
+        userId: data.userId || 'USR-DEMO-001',
+        role: 'PATIENT',
+        patientId: data.identityId || 'PAT-2026-00124',
+        name: data.email?.includes('riya') ? 'Riya Das' : (data.email?.split('@')[0] || 'Verified Patient'),
+        age: 28,
+        gender: 'Female',
+        phone: '+91 98765 43210',
+        verifiedStatus: 'DEMO_VERIFIED'
+      };
+      setPatientIdentity(patIdent);
+      setCurrentPatient(MOCK_PATIENTS[0]);
+    } else {
+      profIdent = {
+        userId: data.userId || 'USR-DEMO-002',
+        role: 'HEALTHCARE_PROFESSIONAL',
+        professionalId: data.identityId || 'PROF-DEMO-00451',
+        name: data.email?.includes('ananya') ? 'Dr. Ananya Sharma' : 'Dr. Medical Officer',
+        title: 'Medical Officer',
+        medicalRegistrationId: 'NMC-84920',
+        facilityId: 'FAC-DEMO-OD-001',
+        facilityName: currentFacility,
+        state: 'Odisha',
+        verifiedStatus: 'DEMO_VERIFIED'
+      };
+      setProfessionalIdentity(profIdent);
+      setCurrentDoctor(MOCK_DOCTORS[0]);
+    }
+
+    const newSession: AuthSession = {
+      sessionId: newSessionId,
+      userId: data.userId || (effectiveRole === 'PATIENT' ? 'USR-DEMO-001' : 'USR-DEMO-002'),
+      role: effectiveRole,
+      identityId: data.identityId || (effectiveRole === 'PATIENT' ? 'PAT-2026-00124' : 'PROF-DEMO-00451'),
+      permissions: newPermissions,
+      issuedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+      verifiedRoles: effectiveRoles,
+      authAssuranceLevel: 'STANDARD',
+      patientIdentity: patIdent || undefined,
+      professionalIdentity: profIdent || undefined
+    };
+
+    sessionStorage.setItem('careq_session', JSON.stringify(newSession));
+    setCurrentSession(newSession);
+    setCurrentRole(effectiveRole);
+    setSelectedAssessmentId(null);
+
+    addAuditEvent(
+      'Authenticated Session Established',
+      data.email || 'user',
+      effectiveRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+      `Authenticated session created for verified role: ${effectiveRole}. Session token: ${newSessionId.slice(0, 14)}...`,
+      undefined,
+      'AUTH_SESSION_CREATED'
+    );
+
+    if (effectiveRole === 'HEALTHCARE_PROFESSIONAL') {
+      navigate('/clinical/dashboard');
+    } else {
+      navigate('/patient/dashboard');
+    }
   };
 
   const switchFacility = (facilityName: string, id: string) => {
@@ -564,7 +690,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 1. Email OTP Send (Login Only)
+  // 1. Email OTP Send (Login Only) - Section 2 & 3
   const sendEmailOtp = async (email: string, purpose: 'login' | 'signup' = 'login', role: UserRole = 'PATIENT'): Promise<EmailOtpSendResponse> => {
     try {
       addAuditEvent(
@@ -573,10 +699,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
         `Authentication OTP requested for registered email: ${email}. Rate limiting and single-use constraints applied.`,
         undefined,
-        'EMAIL_OTP_REQUESTED'
+        'AUTH_EMAIL_OTP_REQUESTED'
       );
 
-      const res = await fetch('/auth/login/request-otp', {
+      const res = await fetch('/auth/email/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -589,7 +715,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
           `Transactional email OTP generated and dispatched to ${data.maskedEmail || email}. Expiration: 5 minutes.`,
           undefined,
-          'EMAIL_OTP_SENT'
+          'AUTH_EMAIL_OTP_REQUESTED'
         );
         return data;
       }
@@ -603,10 +729,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 2. Email OTP Verify (Login Only)
+  // 2. Email OTP Verify (Login Only) - Section 2, 3, & 6
   const verifyEmailOtp = async (email: string, otp: string, purpose: 'login' | 'signup' = 'login'): Promise<EmailOtpVerifyResponse> => {
     try {
-      const res = await fetch('/auth/login/verify-otp', {
+      const res = await fetch('/auth/email/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp })
@@ -619,36 +745,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           data.role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
           `Email address verified successfully. Single-use OTP consumed. Authenticated session token issued: ${data.sessionToken?.slice(0, 14)}...`,
           undefined,
-          'EMAIL_OTP_VERIFIED'
+          'AUTH_EMAIL_OTP_VERIFIED'
         );
-
-        const targetRole: UserRole = data.role === 'HEALTHCARE_PROFESSIONAL' ? 'HEALTHCARE_PROFESSIONAL' : 'PATIENT';
-        const newSessionId = data.sessionToken || `SES-EML-${Date.now().toString(36).toUpperCase()}`;
-        const newPermissions = targetRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
-
-        const newSession: AuthSession = {
-          sessionId: newSessionId,
-          userId: data.userId || (targetRole === 'PATIENT' ? 'USR-DEMO-001' : 'USR-DEMO-002'),
-          role: targetRole,
-          identityId: data.identityId || (targetRole === 'PATIENT' ? 'PAT-2026-00124' : 'PROF-DEMO-00451'),
-          permissions: newPermissions,
-          issuedAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
-          verifiedRoles: targetRole === 'HEALTHCARE_PROFESSIONAL' ? ['PATIENT', 'HEALTHCARE_PROFESSIONAL'] : ['PATIENT'],
-          authAssuranceLevel: 'STANDARD',
-          patientIdentity: targetRole === 'PATIENT' ? (patientIdentity || DEFAULT_PATIENT_IDENTITY) : undefined,
-          professionalIdentity: targetRole === 'HEALTHCARE_PROFESSIONAL' ? (professionalIdentity || DEFAULT_PROFESSIONAL_IDENTITY) : undefined
-        };
-
-        setCurrentSession(newSession);
-        setCurrentRole(targetRole);
-        setSelectedAssessmentId(null);
-
-        if (targetRole === 'HEALTHCARE_PROFESSIONAL') {
-          navigate('/clinical/dashboard');
-        } else {
-          navigate('/patient/dashboard');
-        }
 
         return data;
       }
@@ -659,7 +757,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         'Patient',
         `Verification attempt rejected: ${data.error || 'Invalid OTP'}. Remaining attempts: ${data.attemptsRemaining ?? '0'}`,
         undefined,
-        'EMAIL_OTP_FAILED'
+        'AUTH_EMAIL_OTP_FAILED'
       );
       return {
         success: false,
@@ -874,6 +972,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedAssessmentId,
         loginAsPatient,
         loginAsDoctor,
+        loginWithVerifiedSession,
         logout,
         openWorkspaceSwitcher,
         setWorkspaceSwitchModalOpen,
