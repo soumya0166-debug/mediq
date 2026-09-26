@@ -236,70 +236,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'WORKSPACE_SWITCH_REQUESTED'
     );
 
-    // 2. High-Assurance Step-Up Verification Challenge
-    let stepUpToken = `STU-LOCAL-${Date.now().toString(36).toUpperCase()}`;
-    if (stepUpData) {
-      addAuditEvent(
-        'Step-Up Challenge Issued',
-        targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Dr. Ananya Sharma') : (currentPatient?.name || 'Riya Das'),
-        targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
-        `High-assurance ${stepUpData.challengeType} challenge presented for ${targetRole} credential verification.`,
-        undefined,
-        'STEP_UP_CHALLENGE_ISSUED'
+    // 2. High-Assurance Mobile OTP Verification Challenge
+    if (stepUpData?.code) {
+      const verifyRes = await verifyMobileOtpForWorkspaceSwitch(
+        stepUpData.code,
+        targetRole,
+        stepUpData.clinicalJustification
       );
-
-      try {
-        const response = await fetch('/api/auth/step-up-challenge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetRole,
-            challengeType: stepUpData.challengeType,
-            code: stepUpData.code,
-            clinicalJustification: stepUpData.clinicalJustification
-          })
-        });
-
-        const resData = await response.json();
-
-        if (!response.ok || !resData.success) {
-          addAuditEvent(
-            'Step-Up Challenge Failed',
-            targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Dr. Ananya Sharma') : (currentPatient?.name || 'Riya Das'),
-            targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
-            `Step-up challenge rejected: ${resData.message || 'Incorrect credentials'}. Transition aborted.`,
-            undefined,
-            'STEP_UP_CHALLENGE_FAILED'
-          );
-          return { success: false, message: resData.message || 'Invalid step-up verification code.' };
-        }
-
-        stepUpToken = resData.stepUpToken || stepUpToken;
-
-        addAuditEvent(
-          'Step-Up Challenge Verified',
-          targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Dr. Ananya Sharma') : (currentPatient?.name || 'Riya Das'),
-          targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
-          `High-assurance identity verification succeeded. Token: ${stepUpToken.substring(0, 16)}... Reason: ${stepUpData.clinicalJustification || 'Clinical Duty'}`,
-          undefined,
-          'STEP_UP_CHALLENGE_VERIFIED'
-        );
-      } catch {
-        // Fallback local verification
-        const isDocValid = targetRole === 'HEALTHCARE_PROFESSIONAL' && (stepUpData.code === '482910' || stepUpData.code === '719402');
-        const isPatValid = targetRole === 'PATIENT' && (stepUpData.code === '123456' || stepUpData.code === '654321');
-        if (!isDocValid && !isPatValid) {
-          addAuditEvent(
-            'Step-Up Challenge Failed',
-            targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Dr. Ananya Sharma') : (currentPatient?.name || 'Riya Das'),
-            targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
-            `Step-up verification code rejected (Local fallback check).`,
-            undefined,
-            'STEP_UP_CHALLENGE_FAILED'
-          );
-          return { success: false, message: 'Invalid verification code. Please check your credentials.' };
-        }
+      if (!verifyRes.success) {
+        return { 
+          success: false, 
+          message: verifyRes.message || 'Invalid Mobile OTP verification code. High-assurance check rejected.' 
+        };
       }
+      return { success: true, message: 'Workspace switch verified and authorized via Mobile OTP.' };
     }
 
     // 3. Clear role-scoped state to prevent data leakage (Section 18)
@@ -614,13 +564,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 1. Email OTP Send
+  // 1. Email OTP Send (Login Only)
   const sendEmailOtp = async (email: string, purpose: 'login' | 'signup' = 'login', role: UserRole = 'PATIENT'): Promise<EmailOtpSendResponse> => {
     try {
-      const res = await fetch('/api/auth/email/send-otp', {
+      addAuditEvent(
+        'Email OTP Requested',
+        email,
+        role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+        `Authentication OTP requested for registered email: ${email}. Rate limiting and single-use constraints applied.`,
+        undefined,
+        'EMAIL_OTP_REQUESTED'
+      );
+
+      const res = await fetch('/auth/login/request-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, purpose, role })
+        body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -628,7 +587,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           'Email Verification Code Dispatched',
           email,
           role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-          `Transactional email OTP generated and sent to ${data.maskedEmail || email} for ${purpose}.`,
+          `Transactional email OTP generated and dispatched to ${data.maskedEmail || email}. Expiration: 5 minutes.`,
           undefined,
           'EMAIL_OTP_SENT'
         );
@@ -644,13 +603,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 2. Email OTP Verify
+  // 2. Email OTP Verify (Login Only)
   const verifyEmailOtp = async (email: string, otp: string, purpose: 'login' | 'signup' = 'login'): Promise<EmailOtpVerifyResponse> => {
     try {
-      const res = await fetch('/api/auth/email/verify-otp', {
+      const res = await fetch('/auth/login/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, purpose })
+        body: JSON.stringify({ email, otp })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -658,17 +617,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           'Email OTP Verified',
           email,
           data.role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-          `Email address verified successfully. Authenticated session token issued: ${data.sessionToken?.slice(0, 14)}...`,
+          `Email address verified successfully. Single-use OTP consumed. Authenticated session token issued: ${data.sessionToken?.slice(0, 14)}...`,
           undefined,
           'EMAIL_OTP_VERIFIED'
         );
 
-        if (purpose === 'login') {
-          if (data.role === 'HEALTHCARE_PROFESSIONAL') {
-            loginAsDoctor('DOC-1');
-          } else {
-            loginAsPatient('PAT-1');
-          }
+        const targetRole: UserRole = data.role === 'HEALTHCARE_PROFESSIONAL' ? 'HEALTHCARE_PROFESSIONAL' : 'PATIENT';
+        const newSessionId = data.sessionToken || `SES-EML-${Date.now().toString(36).toUpperCase()}`;
+        const newPermissions = targetRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
+
+        const newSession: AuthSession = {
+          sessionId: newSessionId,
+          userId: data.userId || (targetRole === 'PATIENT' ? 'USR-DEMO-001' : 'USR-DEMO-002'),
+          role: targetRole,
+          identityId: data.identityId || (targetRole === 'PATIENT' ? 'PAT-2026-00124' : 'PROF-DEMO-00451'),
+          permissions: newPermissions,
+          issuedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+          verifiedRoles: targetRole === 'HEALTHCARE_PROFESSIONAL' ? ['PATIENT', 'HEALTHCARE_PROFESSIONAL'] : ['PATIENT'],
+          authAssuranceLevel: 'STANDARD',
+          patientIdentity: targetRole === 'PATIENT' ? (patientIdentity || DEFAULT_PATIENT_IDENTITY) : undefined,
+          professionalIdentity: targetRole === 'HEALTHCARE_PROFESSIONAL' ? (professionalIdentity || DEFAULT_PROFESSIONAL_IDENTITY) : undefined
+        };
+
+        setCurrentSession(newSession);
+        setCurrentRole(targetRole);
+        setSelectedAssessmentId(null);
+
+        if (targetRole === 'HEALTHCARE_PROFESSIONAL') {
+          navigate('/clinical/dashboard');
+        } else {
+          navigate('/patient/dashboard');
         }
 
         return data;
@@ -678,7 +657,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         'Email OTP Verification Failed',
         email,
         'Patient',
-        `Verification attempt rejected: ${data.error || 'Invalid OTP'}. Remaining attempts: ${data.attemptsRemaining ?? 'unknown'}`,
+        `Verification attempt rejected: ${data.error || 'Invalid OTP'}. Remaining attempts: ${data.attemptsRemaining ?? '0'}`,
         undefined,
         'EMAIL_OTP_FAILED'
       );
@@ -692,29 +671,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 3. Mobile OTP Send for Workspace Switch
+  // 3. Mobile OTP Send for Workspace Switch (Workspace Switching Only)
   const sendMobileOtpForWorkspaceSwitch = async (targetRole: UserRole, clinicalJustification?: string): Promise<MobileOtpSendResponse> => {
     const activeSessionId = currentSession?.sessionId || 'SES-CURRENT';
-    const mobileNumber = currentRole === 'PATIENT' ? (currentPatient?.phone || '+91 98765 43210') : '+91 98765 43210';
+    const actorName = currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor');
+    const actorRole = currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker';
 
     addAuditEvent(
-      'Workspace Change Requested',
-      currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
-      currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-      `Deliberate workspace transition requested from ${currentRole} to ${targetRole}. Mobile OTP security challenge initiated.`,
+      'Workspace Switch Initiated',
+      actorName,
+      actorRole,
+      `High-assurance workspace transition initiated: ${currentRole} -> ${targetRole}. Mobile OTP security barrier required.`,
       undefined,
-      'WORKSPACE_CHANGE_REQUESTED'
+      'WORKSPACE_SWITCH_INITIATED'
     );
 
     try {
-      const res = await fetch('/api/auth/mobile/send-otp', {
+      const res = await fetch('/auth/workspace/request-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-careq-session-id': activeSessionId
+        },
         body: JSON.stringify({
           sessionId: activeSessionId,
-          currentRole,
           targetRole,
-          mobileNumber,
           clinicalJustification
         })
       });
@@ -722,14 +703,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.ok && data.success) {
         addAuditEvent(
           'Mobile OTP Dispatched',
-          currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
-          currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-          `SMS OTP dispatched to registered mobile number ${data.maskedMobile || mobileNumber} for workspace transition.`,
+          actorName,
+          actorRole,
+          `Transactional Mobile OTP dispatched to verified phone: ${data.maskedMobile || 'registered mobile'}. Single-use, valid for 5 minutes.`,
           undefined,
           'MOBILE_OTP_SENT'
         );
         return data;
       }
+
+      addAuditEvent(
+        'Workspace Switch Rejected',
+        actorName,
+        actorRole,
+        `Workspace transition request rejected: ${data.error || 'Mobile verification service failure'}.`,
+        undefined,
+        'WORKSPACE_SWITCH_REJECTED'
+      );
+
       return {
         success: false,
         message: data.error || 'Failed to dispatch mobile verification code.',
@@ -740,13 +731,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 4. Mobile OTP Verify & Workspace Transition
+  // 4. Mobile OTP Verify & Secure Workspace Transition
   const verifyMobileOtpForWorkspaceSwitch = async (otp: string, targetRole: UserRole, clinicalJustification?: string): Promise<MobileOtpVerifyResponse> => {
     const activeSessionId = currentSession?.sessionId || 'SES-CURRENT';
+    const actorName = currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor');
+    const actorRole = currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker';
+
     try {
-      const res = await fetch('/api/auth/mobile/verify-otp', {
+      const res = await fetch('/auth/workspace/verify-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-careq-session-id': activeSessionId
+        },
         body: JSON.stringify({
           sessionId: activeSessionId,
           otp,
@@ -755,32 +752,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        // Audit OTP verification
+        // 1. Audit Mobile OTP verification
         addAuditEvent(
           'Mobile OTP Verified',
-          targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Doctor') : (currentPatient?.name || 'Patient'),
-          targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
-          `Mobile OTP verified via SMS authentication gateway for transition to ${targetRole}.`,
+          actorName,
+          actorRole,
+          `Cryptographic mobile OTP verified by server. Authorization approved for transition to ${targetRole}.`,
           undefined,
           'MOBILE_OTP_VERIFIED'
         );
 
-        // Terminate old session
-        const oldSessionType: AuditEventType = currentRole === 'PATIENT' ? 'PATIENT_SESSION_TERMINATED' : 'PROFESSIONAL_SESSION_TERMINATED';
+        // 2. Invalidate old role-scoped session
         addAuditEvent(
           'Previous Session Terminated',
-          currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
-          currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-          `Active ${currentRole} session terminated and role-scoped state purged.`,
+          actorName,
+          actorRole,
+          `Old ${currentRole} session ${activeSessionId} terminated. Role-scoped memory and cache cleared to prevent data leaks.`,
           undefined,
-          oldSessionType
+          'SESSION_TERMINATED'
         );
 
-        // Clear role-scoped state (Section 18, 20)
+        // 3. Clear old role-scoped frontend state
         setSelectedAssessmentId(null);
 
-        // Create new role session
-        const newSessionId = data.newSessionId || `SES-MOB-${Date.now().toString(36).toUpperCase()}`;
+        // 4. Establish new role-scoped session with HIGH_ASSURANCE
+        const newSessionId = data.sessionToken || data.newSessionId || `SES-MOB-${Date.now().toString(36).toUpperCase()}`;
         const newPermissions = targetRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
         const newIdentityId = targetRole === 'PATIENT' 
           ? (patientIdentity?.patientId || 'PAT-2026-00124') 
@@ -805,30 +801,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentSession(newSession);
         setCurrentRole(targetRole);
 
-        const newSessionType: AuditEventType = targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'PROFESSIONAL_SESSION_CREATED' : 'PATIENT_SESSION_CREATED';
+        // 5. Audit transition completion
         addAuditEvent(
-          'Target Workspace Session Created',
-          targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Doctor') : (currentPatient?.name || 'Patient'),
+          'Workspace Switch Completed',
+          targetRole === 'HEALTHCARE_PROFESSIONAL' ? (currentDoctor?.name || 'Dr. Ananya Sharma') : (currentPatient?.name || 'Riya Das'),
           targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Worker' : 'Patient',
-          `New ${targetRole} session established (${newSessionId}) with ${newPermissions.length} isolated permissions.`,
+          `High-assurance workspace transition complete. New session ${newSessionId} issued with ${newPermissions.length} role-isolated permissions.`,
           undefined,
-          newSessionType
+          'WORKSPACE_SWITCH_COMPLETED'
         );
 
+        // 6. Redirect to target workspace
         if (targetRole === 'PATIENT') {
           navigate('/patient/dashboard');
         } else {
           navigate('/clinical/dashboard');
         }
 
-        return { success: true, targetRole, sessionToken: newSessionId, newSession };
+        return data;
       }
 
       addAuditEvent(
-        'Mobile OTP Verification Failed',
-        currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor'),
-        currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-        `Mobile OTP verification failed: ${data.error || 'Incorrect code'}. Workspace transition blocked.`,
+        'Mobile OTP Failed',
+        actorName,
+        actorRole,
+        `Mobile OTP verification failed: ${data.error || 'Incorrect OTP code'}. Remaining attempts: ${data.attemptsRemaining ?? '0'}`,
         undefined,
         'MOBILE_OTP_FAILED'
       );
@@ -839,7 +836,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         attemptsRemaining: data.attemptsRemaining
       };
     } catch {
-      return { success: false, message: 'Network error during mobile OTP verification.' };
+      return { success: false, message: 'Network error verifying mobile verification code.' };
     }
   };
 

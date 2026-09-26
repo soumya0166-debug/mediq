@@ -42,8 +42,6 @@ export const PatientRegisterPage: React.FC = () => {
   const [emailOtpError, setEmailOtpError] = useState<string | null>(null);
   const [emailTimeLeft, setEmailTimeLeft] = useState(300);
   const [emailResendCooldown, setEmailResendCooldown] = useState(0);
-  const [devEmailInboxToken, setDevEmailInboxToken] = useState<string | null>(null);
-  const [devOtpPreview, setDevOtpPreview] = useState<string | null>(null);
 
   // Step 2: Digital Health Identity (Section 7 Spec - Simulated Demo ID)
   const [demoHealthId, setDemoHealthId] = useState('XX-9482-1029-4821');
@@ -99,7 +97,6 @@ export const PatientRegisterPage: React.FC = () => {
     }
     setIsSendingEmailOtp(true);
     setEmailOtpError(null);
-    setDevOtpPreview(null);
 
     const res = await sendEmailOtp(email.trim(), 'signup', 'PATIENT');
     setIsSendingEmailOtp(false);
@@ -109,9 +106,6 @@ export const PatientRegisterPage: React.FC = () => {
       setEmailTimeLeft(300);
       setEmailResendCooldown(60);
       setEmailOtpDigits(['', '', '', '', '', '']);
-      if (res.devPreviewToken) {
-        setDevEmailInboxToken(res.devPreviewToken);
-      }
     } else {
       setEmailOtpError(res.message || 'Could not dispatch verification code to email.');
     }
@@ -137,20 +131,7 @@ export const PatientRegisterPage: React.FC = () => {
     }
   };
 
-  const handleInspectDevInbox = async () => {
-    try {
-      const res = await fetch('/api/dev/inbox');
-      const data = await res.json();
-      if (data.success && data.messages.length > 0) {
-        const latest = data.messages[0];
-        setDevOtpPreview(`Code: ${latest.code} (To: ${latest.to})`);
-        const split = latest.code.split('');
-        setEmailOtpDigits(split);
-      }
-    } catch {
-      setEmailOtpError('Could not connect to dev mailbox.');
-    }
-  };
+
 
   const handleContinueToStep2 = () => {
     if (!isEmailVerified) {
@@ -346,21 +327,7 @@ export const PatientRegisterPage: React.FC = () => {
                       </span>
                     </div>
 
-                    {devEmailInboxToken && (
-                      <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded border border-blue-200">
-                        <span className="text-slate-600 font-medium">Dev Mailbox Available:</span>
-                        <div className="flex items-center gap-2">
-                          {devOtpPreview && <span className="font-mono font-bold text-emerald-700">{devOtpPreview}</span>}
-                          <button
-                            type="button"
-                            onClick={handleInspectDevInbox}
-                            className="font-bold text-teal-800 hover:underline"
-                          >
-                            Inspect Mailbox
-                          </button>
-                        </div>
-                      </div>
-                    )}
+
 
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1.5">

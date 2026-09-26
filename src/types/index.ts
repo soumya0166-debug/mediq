@@ -127,10 +127,10 @@ export interface EmailOtpSendResponse {
   message: string;
   maskedEmail?: string;
   cooldownSeconds?: number;
+  expiresInSeconds?: number;
   providerConfigured?: boolean;
   provider?: string;
   missingConfig?: string[];
-  devPreviewToken?: string;
 }
 
 export interface EmailOtpVerifyResponse {
@@ -153,7 +153,7 @@ export interface MobileOtpSendResponse {
   providerConfigured?: boolean;
   provider?: string;
   missingConfig?: string[];
-  devPreviewToken?: string;
+  code?: string;
 }
 
 export interface MobileOtpVerifyResponse {
@@ -206,6 +206,7 @@ export interface PatientUser {
   preferredLanguage: string;
   demoAadhaarLast4: string;
   isVerified: boolean;
+  mobileVerified?: boolean;
   consentGiven: boolean;
   consentCategories?: ConsentCategories;
   address?: string;
@@ -225,6 +226,7 @@ export interface DoctorUser {
   phone: string;
   email: string;
   isVerified: boolean;
+  mobileVerified?: boolean;
   specialization?: string;
 }
 
@@ -245,6 +247,18 @@ export interface ExtractedReportItem {
     severity?: 'mild' | 'moderate' | 'critical';
   }[];
   summary: string;
+  documentType?: 'lab_report' | 'prescription' | 'radiology' | 'discharge_summary' | 'other';
+  doctorName?: string;
+  facilityName?: string;
+  rawText?: string;
+  fileUrl?: string;
+  prescriptions?: {
+    medicineName: string;
+    dosage?: string;
+    frequency?: string;
+    duration?: string;
+    instructions?: string;
+  }[];
 }
 
 export interface UrgencySignal {
@@ -397,7 +411,9 @@ export type AuditEventType =
   | 'PROFESSIONAL_LOGIN'
   | 'PROFESSIONAL_LOGOUT'
   | 'WORKSPACE_SWITCH_REQUESTED'
+  | 'WORKSPACE_SWITCH_INITIATED'
   | 'WORKSPACE_SWITCH_COMPLETED'
+  | 'WORKSPACE_SWITCH_REJECTED'
   | 'WORKSPACE_ACCESS_DENIED'
   | 'PATIENT_RECORD_VIEWED'
   | 'CLINICAL_CASE_OPENED'
@@ -410,17 +426,21 @@ export type AuditEventType =
   | 'STEP_UP_CHALLENGE_VERIFIED'
   | 'STEP_UP_CHALLENGE_FAILED'
   | 'WORKSPACE_CHANGE_REQUESTED'
+  | 'MOBILE_OTP_REQUESTED'
   | 'MOBILE_OTP_SENT'
   | 'MOBILE_OTP_VERIFIED'
   | 'MOBILE_OTP_FAILED'
   | 'WORKSPACE_CHANGE_DENIED'
+  | 'SESSION_TERMINATED'
   | 'PATIENT_SESSION_TERMINATED'
   | 'PROFESSIONAL_SESSION_CREATED'
   | 'PROFESSIONAL_SESSION_TERMINATED'
   | 'PATIENT_SESSION_CREATED'
+  | 'EMAIL_OTP_REQUESTED'
   | 'EMAIL_OTP_SENT'
   | 'EMAIL_OTP_VERIFIED'
-  | 'EMAIL_OTP_FAILED';
+  | 'EMAIL_OTP_FAILED'
+  | 'RATE_LIMIT_TRIGGERED';
 
 export interface AuditEvent {
   id: string;

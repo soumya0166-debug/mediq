@@ -40,7 +40,6 @@ export const WorkspaceSwitchModal: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [missingConfig, setMissingConfig] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [devToken, setDevToken] = useState<string | undefined>();
   
   // Timer states
   const [expiresIn, setExpiresIn] = useState(300);
@@ -86,7 +85,6 @@ export const WorkspaceSwitchModal: React.FC = () => {
 
     if (res.success) {
       if (res.maskedMobile) setMaskedMobile(res.maskedMobile);
-      if (res.devPreviewToken) setDevToken(res.devPreviewToken);
       setExpiresIn(res.expiresInSeconds || 300);
       setCooldown(res.cooldownSeconds || 60);
       setStage('OTP_ENTRY');
@@ -138,7 +136,6 @@ export const WorkspaceSwitchModal: React.FC = () => {
     if (res.success) {
       setExpiresIn(res.expiresInSeconds || 300);
       setCooldown(res.cooldownSeconds || 60);
-      if (res.devPreviewToken) setDevToken(res.devPreviewToken);
     } else {
       setErrorMessage(res.message || 'Failed to resend code.');
     }
@@ -374,16 +371,6 @@ export const WorkspaceSwitchModal: React.FC = () => {
                 <label className="font-bold text-slate-800">
                   Enter 6-Digit Mobile Verification Code
                 </label>
-                {devToken && (
-                  <button
-                    type="button"
-                    onClick={() => { setMobileOtp(devToken); setErrorMessage(null); }}
-                    className="text-teal-800 hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3 text-teal-600" />
-                    <span>Auto-fill Dev SMS ({devToken})</span>
-                  </button>
-                )}
               </div>
 
               <input

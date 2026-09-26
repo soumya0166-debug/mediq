@@ -19,9 +19,7 @@ import {
   Sparkles,
   Clock,
   RotateCw,
-  KeyRound,
-  Terminal,
-  ExternalLink
+  KeyRound
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -43,8 +41,6 @@ export const LoginPage: React.FC = () => {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [missingConfig, setMissingConfig] = useState<string[] | null>(null);
-  const [devInboxToken, setDevInboxToken] = useState<string | null>(null);
-  const [devOtpPreview, setDevOtpPreview] = useState<string | null>(null);
 
   // Expiration countdown (300 seconds = 5 minutes)
   const [timeLeft, setTimeLeft] = useState(300);
@@ -107,7 +103,6 @@ export const LoginPage: React.FC = () => {
     setIsSendingOtp(true);
     setOtpError(null);
     setMissingConfig(null);
-    setDevOtpPreview(null);
 
     const result = await sendEmailOtp(emailInput.trim(), 'login', targetWorkspace);
     setIsSendingOtp(false);
@@ -117,9 +112,6 @@ export const LoginPage: React.FC = () => {
       setTimeLeft(300);
       setResendCooldown(60);
       setOtpDigits(['', '', '', '', '', '']);
-      if (result.devPreviewToken) {
-        setDevInboxToken(result.devPreviewToken);
-      }
       setTimeout(() => {
         digitInputRefs.current[0]?.focus();
       }, 150);
@@ -199,21 +191,7 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Fetch Dev Inbox OTP for local test verification
-  const handleInspectDevInbox = async () => {
-    try {
-      const res = await fetch('/api/dev/inbox');
-      const data = await res.json();
-      if (data.success && data.messages.length > 0) {
-        const latest = data.messages[0];
-        setDevOtpPreview(`Latest Code from Dev Mailbox: ${latest.code} (To: ${latest.to})`);
-        const split = latest.code.split('');
-        setOtpDigits(split);
-      }
-    } catch {
-      setOtpError('Could not reach dev mailbox API.');
-    }
-  };
+
 
   // Quick Demo Auto-fills
   const handleSelectDemoUser = (type: 'PATIENT' | 'DOCTOR') => {
@@ -552,30 +530,7 @@ export const LoginPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Developer inspection banner if local dev mode */}
-                    {devInboxToken && (
-                      <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-blue-900 flex items-center gap-1">
-                            <Terminal className="w-3.5 h-3.5 text-blue-700" />
-                            <span>Dev Mode: Server Mailbox Active</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleInspectDevInbox}
-                            className="text-[11px] font-bold text-blue-800 hover:underline flex items-center gap-0.5"
-                          >
-                            <span>Inspect Mailbox</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </button>
-                        </div>
-                        {devOtpPreview && (
-                          <div className="text-[11px] font-mono text-emerald-800 bg-white p-1.5 rounded border border-blue-200 font-bold">
-                            {devOtpPreview}
-                          </div>
-                        )}
-                      </div>
-                    )}
+
 
                     {/* 6-Digit OTP Entry */}
                     <div className="space-y-4">

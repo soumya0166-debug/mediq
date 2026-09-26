@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { SAMPLE_REPORTS_LIBRARY } from '../../data/mockData';
+import { documentOcrService } from '../../services/documentOcrService';
 import { 
   FileText, 
   FileCheck, 
@@ -11,16 +12,56 @@ import {
   AlertTriangle, 
   Download, 
   Eye, 
-  ShieldCheck 
+  ShieldCheck,
+  RefreshCw,
+  Plus
 } from 'lucide-react';
 
 export const PatientReportsPage: React.FC = () => {
   const { currentPatient, assessments, navigate } = useApp();
   const { t } = useLanguage();
 
+  const [reportsList, setReportsList] = useState(SAMPLE_REPORTS_LIBRARY);
   const [activeReportIndex, setActiveReportIndex] = useState(0);
-  const sampleReports = SAMPLE_REPORTS_LIBRARY;
-  const currentReport = sampleReports[activeReportIndex] || sampleReports[0];
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentReport = reportsList[activeReportIndex] || reportsList[0];
+
+  const handleUploadNewReport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setIsUploading(true);
+    setUploadProgressText(`Scanning ${file.name}...`);
+
+    try {
+      const parsed = await documentOcrService.processMedicalDocument(file, (stage) => {
+        setUploadProgressText(stage);
+      });
+
+      const newLockerDoc = {
+        id: `REP-LOCKER-${Date.now().toString().slice(-4)}`,
+        title: parsed.reportName,
+        date: parsed.reportDate,
+        hospital: parsed.facilityName || (parsed.doctorName ? `Prescribed by ${parsed.doctorName}` : 'Pathology Laboratory'),
+        badge: parsed.category || 'Hematology',
+        summary: parsed.summary,
+        tests: parsed.tests.length > 0 ? parsed.tests : [
+          { testName: 'OCR Clinical Extract', result: 'Verified', unit: 'Text', referenceRange: 'Standard', isAbnormal: false }
+        ]
+      };
+
+      setReportsList(prev => [newLockerDoc as any, ...prev]);
+      setActiveReportIndex(0);
+    } catch (err: any) {
+      console.error('Error in locker OCR upload:', err);
+    } finally {
+      setIsUploading(false);
+      setUploadProgressText('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10 space-y-6">
@@ -40,6 +81,21 @@ export const PatientReportsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleUploadNewReport}
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="px-4 py-2 bg-[#0A1E3F] hover:bg-[#163B66] text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 shadow-2xs disabled:opacity-50"
+          >
+            {isUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+            <span>{isUploading ? 'Analyzing Document...' : 'Upload Document to Locker'}</span>
+          </button>
           <span className="text-xs text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 font-medium flex items-center gap-1.5 shadow-2xs">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             {t('patient.patientIdLabel')}: {currentPatient?.id}
@@ -47,17 +103,32 @@ export const PatientReportsPage: React.FC = () => {
         </div>
       </div>
 
+      {isUploading && (
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs font-bold text-teal-900 flex items-center gap-2 animate-in fade-in">
+          <RefreshCw className="w-4 h-4 animate-spin text-teal-700" />
+          <span>{uploadProgressText || 'Extracting document information via Neural OCR...'}</span>
+        </div>
+      )}
+
       {/* Grid: Left Report Selector | Right Extracted Detail */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Report List */}
         <div className="lg:col-span-4 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Available Documents ({sampleReports.length})
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Available Documents ({reportsList.length})
+            </h3>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[11px] font-bold text-teal-800 hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> Add File
+            </button>
+          </div>
 
           <div className="space-y-2">
-            {sampleReports.map((r, idx) => (
+            {reportsList.map((r, idx) => (
               <div
                 key={r.id}
                 onClick={() => setActiveReportIndex(idx)}

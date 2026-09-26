@@ -122,6 +122,361 @@ function voiceApiPlugin() {
   };
 }
 
+// ==============================================================================
+// CAREQ PRODUCTION-STYLE OTP AUTHENTICATION & SESSION MANAGEMENT
+// ==============================================================================
+
+interface RegisteredAccount {
+  userId: string;
+  email: string;
+  name: string;
+  role: 'PATIENT' | 'HEALTHCARE_PROFESSIONAL';
+  patientId?: string;
+  professionalId?: string;
+  mobileNumber: string;
+  mobileVerified: boolean;
+  verifiedRoles: ('PATIENT' | 'HEALTHCARE_PROFESSIONAL')[];
+  facilityId?: string;
+  facilityName?: string;
+}
+
+// Canonical registered accounts in the system
+const REGISTERED_ACCOUNTS: RegisteredAccount[] = [
+  {
+    userId: 'USR-DEMO-001',
+    email: 'riya.das.demo@careq-health.org',
+    name: 'Riya Das',
+    role: 'PATIENT',
+    patientId: 'PAT-2026-00124',
+    professionalId: 'PROF-DEMO-00451',
+    mobileNumber: '+91 98765 43210',
+    mobileVerified: true,
+    verifiedRoles: ['PATIENT', 'HEALTHCARE_PROFESSIONAL'],
+    facilityId: 'FAC-DEMO-OD-001',
+    facilityName: 'CAREQ Demo Primary Health Centre, Jatni'
+  },
+  {
+    userId: 'USR-DEMO-002',
+    email: 'dr.ananya.sharma@careq-health.gov.in',
+    name: 'Dr. Ananya Sharma',
+    role: 'HEALTHCARE_PROFESSIONAL',
+    patientId: 'PAT-2026-00124',
+    professionalId: 'PROF-DEMO-00451',
+    mobileNumber: '+91 94370 12399',
+    mobileVerified: true,
+    verifiedRoles: ['PATIENT', 'HEALTHCARE_PROFESSIONAL'],
+    facilityId: 'FAC-DEMO-OD-001',
+    facilityName: 'CAREQ Demo Primary Health Centre, Jatni'
+  },
+  {
+    userId: 'USR-DEMO-003',
+    email: 'amit.kumar.demo@careq-health.org',
+    name: 'Amit Kumar',
+    role: 'PATIENT',
+    patientId: 'PAT-2026-00125',
+    mobileNumber: '+91 94371 88921',
+    mobileVerified: true,
+    verifiedRoles: ['PATIENT']
+  },
+  {
+    userId: 'USR-DEMO-004',
+    email: 'sunita.devi.demo@careq-health.org',
+    name: 'Sunita Devi',
+    role: 'PATIENT',
+    patientId: 'PAT-2026-00126',
+    mobileNumber: '+91 91234 56789',
+    mobileVerified: false, // Explicitly unverified mobile for security testing
+    verifiedRoles: ['PATIENT']
+  },
+  {
+    userId: 'USR-DEMO-005',
+    email: 'dr.arjun.mehta@careq-health.gov.in',
+    name: 'Dr. Arjun Mehta',
+    role: 'HEALTHCARE_PROFESSIONAL',
+    professionalId: 'PROF-DEMO-00712',
+    mobileNumber: '+91 94372 99881',
+    mobileVerified: true,
+    verifiedRoles: ['HEALTHCARE_PROFESSIONAL'],
+    facilityId: 'FAC-DEMO-OD-002',
+    facilityName: 'CAREQ Demo Community Health Centre, Khordha'
+  }
+];
+
+// Active Server-Side Session Store
+interface ActiveServerSession {
+  sessionId: string;
+  userId: string;
+  role: 'PATIENT' | 'HEALTHCARE_PROFESSIONAL';
+  identityId: string;
+  permissions: string[];
+  issuedAt: number;
+  expiresAt: number;
+  verifiedRoles: ('PATIENT' | 'HEALTHCARE_PROFESSIONAL')[];
+  authAssuranceLevel: 'STANDARD' | 'HIGH_ASSURANCE';
+  account: RegisteredAccount;
+}
+
+const activeSessionsStore = new Map<string, ActiveServerSession>();
+
+// Initialize default demo session for Riya Das
+activeSessionsStore.set('SES-INIT-PAT-9042', {
+  sessionId: 'SES-INIT-PAT-9042',
+  userId: 'USR-DEMO-001',
+  role: 'PATIENT',
+  identityId: 'PAT-2026-00124',
+  permissions: [
+    'patient:self:read', 'patient:self:update', 'patient:self:assessment:create',
+    'patient:self:assessment:read', 'patient:self:voice:create', 'patient:self:reports:read',
+    'patient:self:timeline:read', 'patient:self:followup:read', 'patient:self:followup:respond',
+    'patient:self:consent:read', 'patient:self:consent:update', 'patient:self:referral:read'
+  ],
+  issuedAt: Date.now(),
+  expiresAt: Date.now() + 8 * 3600 * 1000,
+  verifiedRoles: ['PATIENT', 'HEALTHCARE_PROFESSIONAL'],
+  authAssuranceLevel: 'STANDARD',
+  account: REGISTERED_ACCOUNTS[0]
+});
+
+// Secure OTP records (stores only hashes and salts, NEVER plain OTPs)
+interface EmailOtpRecord {
+  email: string;
+  otpHash: string;
+  salt: string;
+  attempts: number;
+  maxAttempts: number;
+  expiresAt: number;
+  resendAvailableAt: number;
+  account: RegisteredAccount;
+  createdAt: number;
+}
+
+interface MobileOtpRecord {
+  sessionId: string;
+  userId: string;
+  mobileNumber: string;
+  otpHash: string;
+  salt: string;
+  attempts: number;
+  maxAttempts: number;
+  expiresAt: number;
+  resendAvailableAt: number;
+  currentRole: string;
+  targetRole: string;
+  clinicalJustification?: string;
+  createdAt: number;
+}
+
+const emailOtpStore = new Map<string, EmailOtpRecord>();
+const mobileOtpStore = new Map<string, MobileOtpRecord>();
+
+// Sliding rate-limit windows (max 5 requests per 15 min per recipient)
+const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
+
+function checkRateLimit(key: string, maxRequests = 5, windowMs = 15 * 60 * 1000): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now - entry.windowStart > windowMs) {
+    rateLimitMap.set(key, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= maxRequests) {
+    return false;
+  }
+  entry.count += 1;
+  return true;
+}
+
+function maskEmail(email: string): string {
+  const [user, domain] = email.split('@');
+  if (!user || !domain) return email;
+  if (user.length <= 2) return `${user[0]}*@${domain}`;
+  return `${user.slice(0, 2)}${'*'.repeat(Math.min(user.length - 2, 5))}@${domain}`;
+}
+
+function maskMobile(mobile: string): string {
+  const cleaned = mobile.replace(/\s+/g, '');
+  if (cleaned.length < 6) return mobile;
+  const visiblePrefix = cleaned.slice(0, 3);
+  const visibleSuffix = cleaned.slice(-4);
+  return `${visiblePrefix} ******${visibleSuffix}`;
+}
+
+function generateSecureOtp(): string {
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
+function hashOtp(otp: string, salt: string): string {
+  return crypto.createHash('sha256').update(otp + salt).digest('hex');
+}
+
+// Transactional Email Dispatcher (Resend, SendGrid, SMTP, or Dev)
+async function dispatchEmailOtp(email: string, otp: string, _purpose: string): Promise<{ success: boolean; provider: string; error?: string; missingConfig?: string[] }> {
+  const provider = (process.env.EMAIL_PROVIDER || 'dev').toLowerCase();
+  const fromEmail = process.env.EMAIL_FROM || 'noreply@careq-health.gov.in';
+
+  if (provider === 'resend') {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        provider: 'resend',
+        error: 'Email verification service is not configured.',
+        missingConfig: ['RESEND_API_KEY', 'EMAIL_FROM']
+      };
+    }
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [email],
+          subject: `CAREQ - Your 6-Digit Email Verification Code`,
+          html: `<div style="font-family: Arial, sans-serif; padding: 24px; color: #0F172A; max-width: 500px; margin: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
+            <h2 style="color: #0A1E3F; margin-top: 0;">CAREQ Health Security</h2>
+            <p>Your one-time email verification code is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; padding: 16px; background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; text-align: center; color: #0E7490; font-family: monospace;">
+              ${otp}
+            </div>
+            <p style="font-size: 13px; color: #64748B; margin-top: 16px;">This code is valid for 5 minutes and single-use only. Do not share this code with anyone.</p>
+          </div>`
+        })
+      });
+      if (!res.ok) {
+        return { success: false, provider: 'resend', error: `Resend dispatch failed with HTTP status: ${res.status}` };
+      }
+      return { success: true, provider: 'resend' };
+    } catch (err: any) {
+      return { success: false, provider: 'resend', error: `Resend network connection error: ${err.message}` };
+    }
+  }
+
+  if (provider === 'sendgrid') {
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        provider: 'sendgrid',
+        error: 'Email verification service is not configured.',
+        missingConfig: ['SENDGRID_API_KEY', 'EMAIL_FROM']
+      };
+    }
+    try {
+      const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email }] }],
+          from: { email: fromEmail },
+          subject: `CAREQ - Your Verification Code`,
+          content: [{ type: 'text/plain', value: `Your CAREQ verification code is: ${otp}. Valid for 5 minutes.` }]
+        })
+      });
+      if (!res.ok) {
+        return { success: false, provider: 'sendgrid', error: `SendGrid dispatch error: HTTP ${res.status}` };
+      }
+      return { success: true, provider: 'sendgrid' };
+    } catch (err: any) {
+      return { success: false, provider: 'sendgrid', error: `SendGrid error: ${err.message}` };
+    }
+  }
+
+  if (provider === 'dev' && process.env.NODE_ENV !== 'production') {
+    // Isolated local development mock: simulates delivery without returning or logging plaintext OTP
+    return { success: true, provider: 'dev' };
+  }
+
+  return {
+    success: false,
+    provider,
+    error: 'Email verification service is not configured.',
+    missingConfig: ['RESEND_API_KEY', 'EMAIL_FROM']
+  };
+}
+
+// Transactional SMS Dispatcher (Twilio, MSG91, or Dev)
+async function dispatchMobileOtp(mobile: string, otp: string, _roleTransition: string): Promise<{ success: boolean; provider: string; error?: string; missingConfig?: string[] }> {
+  const provider = (process.env.SMS_PROVIDER || 'dev').toLowerCase();
+
+  if (provider === 'twilio') {
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_FROM_NUMBER;
+
+    if (!sid || !token || !from) {
+      return {
+        success: false,
+        provider: 'twilio',
+        error: 'SMS verification service is not configured.',
+        missingConfig: [
+          !sid ? 'TWILIO_ACCOUNT_SID' : '',
+          !token ? 'TWILIO_AUTH_TOKEN' : '',
+          !from ? 'TWILIO_FROM_NUMBER' : ''
+        ].filter(Boolean)
+      };
+    }
+
+    try {
+      const auth = Buffer.from(`${sid}:${token}`).toString('base64');
+      const params = new URLSearchParams();
+      params.append('To', mobile);
+      params.append('From', from);
+      params.append('Body', `[CAREQ Healthcare] Your high-assurance workspace switch OTP is: ${otp}. Valid for 5 minutes.`);
+
+      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      });
+
+      if (!res.ok) {
+        return { success: false, provider: 'twilio', error: `Twilio dispatch failed: HTTP ${res.status}` };
+      }
+      return { success: true, provider: 'twilio' };
+    } catch (err: any) {
+      return { success: false, provider: 'twilio', error: `Twilio connection error: ${err.message}` };
+    }
+  }
+
+  if (provider === 'msg91') {
+    const authKey = process.env.MSG91_AUTH_KEY;
+    const templateId = process.env.MSG91_TEMPLATE_ID;
+    if (!authKey || !templateId) {
+      return {
+        success: false,
+        provider: 'msg91',
+        error: 'SMS verification service is not configured.',
+        missingConfig: [
+          !authKey ? 'MSG91_AUTH_KEY' : '',
+          !templateId ? 'MSG91_TEMPLATE_ID' : ''
+        ].filter(Boolean)
+      };
+    }
+    return { success: true, provider: 'msg91' };
+  }
+
+  if (provider === 'dev' && process.env.NODE_ENV !== 'production') {
+    // Isolated local development mock: simulates delivery without returning or logging plaintext OTP
+    return { success: true, provider: 'dev' };
+  }
+
+  return {
+    success: false,
+    provider,
+    error: 'SMS verification service is not configured.',
+    missingConfig: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER']
+  };
+}
+
 function careqApiAuthPlugin() {
   return {
     name: 'careq-api-auth',
@@ -159,6 +514,18 @@ function careqApiAuthPlugin() {
             error: 'Unauthorized',
             code: 'SESSION_MISSING',
             message: 'Active clinical session token required.'
+          }));
+          return;
+        }
+
+        // Validate session exists in server session store
+        const session = activeSessionsStore.get(sessionId);
+        if (!session || session.role !== 'HEALTHCARE_PROFESSIONAL' || Date.now() > session.expiresAt) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({
+            error: 'Unauthorized',
+            code: 'SESSION_INVALID_OR_EXPIRED',
+            message: 'Your clinical session is invalid or has expired. Please sign in or switch workspace with Mobile OTP.'
           }));
           return;
         }
@@ -211,12 +578,24 @@ function careqApiAuthPlugin() {
           return;
         }
 
-        if (!sessionId || !patientIdHeader) {
+        if (!sessionId) {
           res.statusCode = 401;
           res.end(JSON.stringify({
             error: 'Unauthorized',
-            code: 'SESSION_INVALID',
-            message: 'Valid patient session and patient identity required.'
+            code: 'SESSION_MISSING',
+            message: 'Valid patient session required.'
+          }));
+          return;
+        }
+
+        // Validate session exists in server session store
+        const session = activeSessionsStore.get(sessionId);
+        if (!session || session.role !== 'PATIENT' || Date.now() > session.expiresAt) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({
+            error: 'Unauthorized',
+            code: 'SESSION_INVALID_OR_EXPIRED',
+            message: 'Your patient session is invalid or has expired. Please sign in.'
           }));
           return;
         }
@@ -224,7 +603,7 @@ function careqApiAuthPlugin() {
         // Resource ownership check: cannot query another patient's profile
         const urlObj = new URL(req.url, 'http://localhost');
         const queryPatientId = urlObj.searchParams.get('patientId');
-        if (queryPatientId && queryPatientId !== patientIdHeader) {
+        if (queryPatientId && patientIdHeader && queryPatientId !== patientIdHeader) {
           res.statusCode = 403;
           res.end(JSON.stringify({
             error: 'Forbidden',
@@ -238,328 +617,53 @@ function careqApiAuthPlugin() {
         res.end(JSON.stringify({
           status: 'success',
           workspace: 'PATIENT_PORTAL',
-          patientId: patientIdHeader,
+          patientId: patientIdHeader || session.identityId,
           records: [
             { id: 'rec-001', type: 'assessment', date: '2026-09-24', status: 'reviewed' }
           ]
         }));
       });
-
-      // /api/auth/step-up-challenge endpoint (High-Assurance Re-Authentication)
-      server.middlewares.use('/api/auth/step-up-challenge', (req: any, res: any, _next: any) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Method Not Allowed' }));
-          return;
-        }
-
-        let body = '';
-        req.on('data', (chunk: any) => { body += chunk; });
-        req.on('end', () => {
-          res.setHeader('Content-Type', 'application/json');
-          try {
-            const data = JSON.parse(body || '{}');
-            const { targetRole, challengeType, code } = data;
-
-            // Doctor high-assurance codes: PIN 482910 or OTP 719402
-            // Patient high-assurance codes: PIN 123456 or OTP 654321
-            let valid = false;
-            if (targetRole === 'HEALTHCARE_PROFESSIONAL') {
-              if (challengeType === 'PIN' && code === '482910') valid = true;
-              if (challengeType === 'OTP' && code === '719402') valid = true;
-            } else if (targetRole === 'PATIENT') {
-              if (challengeType === 'PIN' && code === '123456') valid = true;
-              if (challengeType === 'OTP' && code === '654321') valid = true;
-            }
-
-            if (!valid) {
-              res.statusCode = 401;
-              res.end(JSON.stringify({
-                success: false,
-                code: 'STEP_UP_CHALLENGE_FAILED',
-                message: 'Invalid step-up challenge verification code. High-assurance check rejected.',
-                attemptsRemaining: 2
-              }));
-              return;
-            }
-
-            const stepUpToken = `STU-SEC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            res.statusCode = 200;
-            res.end(JSON.stringify({
-              success: true,
-              status: 'verified',
-              stepUpToken,
-              targetRole,
-              assuranceLevel: 'HIGH_ASSURANCE',
-              issuedAt: new Date().toISOString(),
-              message: 'High-assurance identity verification succeeded. Session transition authorized.'
-            }));
-          } catch {
-            res.statusCode = 400;
-            res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
-          }
-        });
-      });
     }
   };
-}
-
-// In-memory secure OTP storage for server lifecycle
-interface EmailOtpRecord {
-  email: string;
-  otpHash: string;
-  salt: string;
-  attempts: number;
-  maxAttempts: number;
-  expiresAt: number;
-  resendAvailableAt: number;
-  purpose: 'login' | 'signup';
-  role?: string;
-  createdAt: number;
-}
-
-interface MobileOtpRecord {
-  sessionId: string;
-  mobileNumber: string;
-  otpHash: string;
-  salt: string;
-  attempts: number;
-  maxAttempts: number;
-  expiresAt: number;
-  resendAvailableAt: number;
-  currentRole: string;
-  targetRole: string;
-  clinicalJustification?: string;
-  createdAt: number;
-}
-
-const emailOtpStore = new Map<string, EmailOtpRecord>();
-const mobileOtpStore = new Map<string, MobileOtpRecord>();
-
-interface DevDispatchLog {
-  id: string;
-  type: 'EMAIL' | 'SMS';
-  recipient: string;
-  timestamp: string;
-  provider: string;
-  status: 'DELIVERED_DEV_INBOX' | 'SENT_EXTERNAL_API' | 'FAILED_CONFIG_MISSING';
-  details: string;
-  devOtpRef?: string;
-}
-const devDispatchLogs: DevDispatchLog[] = [];
-
-function maskEmail(email: string): string {
-  const [user, domain] = email.split('@');
-  if (!user || !domain) return email;
-  if (user.length <= 2) return `${user[0]}*@${domain}`;
-  return `${user.slice(0, 2)}${'*'.repeat(Math.min(user.length - 2, 5))}@${domain}`;
-}
-
-function maskMobile(mobile: string): string {
-  const cleaned = mobile.replace(/\s+/g, '');
-  if (cleaned.length < 6) return mobile;
-  const visiblePrefix = cleaned.slice(0, 3);
-  const visibleSuffix = cleaned.slice(-4);
-  return `${visiblePrefix} ******${visibleSuffix}`;
-}
-
-function generateSecureOtp(): string {
-  return crypto.randomInt(100000, 1000000).toString();
-}
-
-function hashOtp(otp: string, salt: string): string {
-  return crypto.createHash('sha256').update(otp + salt).digest('hex');
-}
-
-async function dispatchEmailOtp(email: string, otp: string, purpose: string): Promise<{ success: boolean; provider: string; error?: string; missingConfig?: string[] }> {
-  const provider = (process.env.EMAIL_PROVIDER || 'dev').toLowerCase();
-  const fromEmail = process.env.EMAIL_FROM || 'noreply@careq-health.gov.in';
-
-  if (provider === 'resend') {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      return {
-        success: false,
-        provider: 'resend',
-        error: 'Email verification service is not configured.',
-        missingConfig: ['RESEND_API_KEY', 'EMAIL_FROM']
-      };
-    }
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [email],
-          subject: `CAREQ - Your 6-Digit ${purpose === 'signup' ? 'Registration' : 'Login'} Verification Code`,
-          html: `<p>Your CAREQ verification code is: <strong>${otp}</strong>. Valid for 5 minutes.</p>`
-        })
-      });
-      if (!res.ok) {
-        return { success: false, provider: 'resend', error: `Resend dispatch failed with status: ${res.status}` };
-      }
-      return { success: true, provider: 'resend' };
-    } catch (err: any) {
-      return { success: false, provider: 'resend', error: `Resend network error: ${err.message}` };
-    }
-  }
-
-  if (provider === 'sendgrid') {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (!apiKey) {
-      return {
-        success: false,
-        provider: 'sendgrid',
-        error: 'Email verification service is not configured.',
-        missingConfig: ['SENDGRID_API_KEY', 'EMAIL_FROM']
-      };
-    }
-    try {
-      const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          personalizations: [{ to: [{ email }] }],
-          from: { email: fromEmail },
-          subject: `CAREQ Verification Code`,
-          content: [{ type: 'text/plain', value: `Your CAREQ code is: ${otp}` }]
-        })
-      });
-      if (!res.ok) {
-        return { success: false, provider: 'sendgrid', error: `SendGrid error: ${res.status}` };
-      }
-      return { success: true, provider: 'sendgrid' };
-    } catch (err: any) {
-      return { success: false, provider: 'sendgrid', error: `SendGrid error: ${err.message}` };
-    }
-  }
-
-  // Development Mode (or configured dev mailbox)
-  const logItem: DevDispatchLog = {
-    id: `DEV-EML-${Date.now().toString(36)}`,
-    type: 'EMAIL',
-    recipient: email,
-    timestamp: new Date().toISOString(),
-    provider: 'Development Local Dispatcher',
-    status: 'DELIVERED_DEV_INBOX',
-    details: `Transactional Email OTP generated for ${purpose}. Expiration: 5 minutes.`,
-    devOtpRef: otp
-  };
-  devDispatchLogs.unshift(logItem);
-  if (devDispatchLogs.length > 50) devDispatchLogs.pop();
-
-  return { success: true, provider: 'dev' };
-}
-
-async function dispatchMobileOtp(mobile: string, otp: string, roleTransition: string): Promise<{ success: boolean; provider: string; error?: string; missingConfig?: string[] }> {
-  const provider = (process.env.SMS_PROVIDER || 'dev').toLowerCase();
-
-  if (provider === 'twilio') {
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_FROM_NUMBER;
-
-    if (!sid || !token || !from) {
-      return {
-        success: false,
-        provider: 'twilio',
-        error: 'Mobile verification service is not configured.',
-        missingConfig: [
-          !sid ? 'TWILIO_ACCOUNT_SID' : '',
-          !token ? 'TWILIO_AUTH_TOKEN' : '',
-          !from ? 'TWILIO_FROM_NUMBER' : ''
-        ].filter(Boolean)
-      };
-    }
-
-    try {
-      const auth = Buffer.from(`${sid}:${token}`).toString('base64');
-      const params = new URLSearchParams();
-      params.append('To', mobile);
-      params.append('From', from);
-      params.append('Body', `[CAREQ Healthcare] Your high-assurance workspace switch OTP is: ${otp}. Valid for 5 minutes.`);
-
-      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: params.toString()
-      });
-
-      if (!res.ok) {
-        return { success: false, provider: 'twilio', error: `Twilio dispatch failed: ${res.status}` };
-      }
-      return { success: true, provider: 'twilio' };
-    } catch (err: any) {
-      return { success: false, provider: 'twilio', error: `Twilio error: ${err.message}` };
-    }
-  }
-
-  if (provider === 'msg91') {
-    const authKey = process.env.MSG91_AUTH_KEY;
-    const templateId = process.env.MSG91_TEMPLATE_ID;
-    if (!authKey || !templateId) {
-      return {
-        success: false,
-        provider: 'msg91',
-        error: 'Mobile verification service is not configured.',
-        missingConfig: [
-          !authKey ? 'MSG91_AUTH_KEY' : '',
-          !templateId ? 'MSG91_TEMPLATE_ID' : ''
-        ].filter(Boolean)
-      };
-    }
-    return { success: true, provider: 'msg91' };
-  }
-
-  // Development Dispatcher
-  const logItem: DevDispatchLog = {
-    id: `DEV-SMS-${Date.now().toString(36)}`,
-    type: 'SMS',
-    recipient: mobile,
-    timestamp: new Date().toISOString(),
-    provider: 'Development Local SMS Dispatcher',
-    status: 'DELIVERED_DEV_INBOX',
-    details: `Transactional Mobile OTP generated for workspace transition (${roleTransition}). Expiration: 5 minutes.`,
-    devOtpRef: otp
-  };
-  devDispatchLogs.unshift(logItem);
-  if (devDispatchLogs.length > 50) devDispatchLogs.pop();
-
-  return { success: true, provider: 'dev' };
 }
 
 function careqOtpAuthPlugin() {
   return {
     name: 'careq-otp-auth',
     configureServer(server: any) {
-      // 1. GET /api/auth/config-status
-      server.middlewares.use('/api/auth/config-status', (req: any, res: any, next: any) => {
-        if (req.method !== 'GET') return next();
-        res.setHeader('Content-Type', 'application/json');
+      
+      // Helper to handle body parsing
+      const parseJsonBody = (req: any): Promise<any> => {
+        return new Promise((resolve, reject) => {
+          let body = '';
+          req.on('data', (chunk: any) => { body += chunk; });
+          req.on('end', () => {
+            try {
+              resolve(body ? JSON.parse(body) : {});
+            } catch (e) {
+              reject(e);
+            }
+          });
+        });
+      };
 
+      // 0. Configuration Status Endpoint: GET /api/auth/config-status or /auth/config-status
+      const handleConfigStatus = (_req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
         const emailProvider = (process.env.EMAIL_PROVIDER || 'dev').toLowerCase();
         const smsProvider = (process.env.SMS_PROVIDER || 'dev').toLowerCase();
 
         let emailConfigured = false;
         let missingEmailConfig: string[] = [];
         if (emailProvider === 'resend') {
-          emailConfigured = Boolean(process.env.RESEND_API_KEY);
-          if (!emailConfigured) missingEmailConfig.push('RESEND_API_KEY');
+          emailConfigured = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+          if (!process.env.RESEND_API_KEY) missingEmailConfig.push('RESEND_API_KEY');
+          if (!process.env.EMAIL_FROM) missingEmailConfig.push('EMAIL_FROM');
         } else if (emailProvider === 'sendgrid') {
-          emailConfigured = Boolean(process.env.SENDGRID_API_KEY);
-          if (!emailConfigured) missingEmailConfig.push('SENDGRID_API_KEY');
-        } else {
+          emailConfigured = Boolean(process.env.SENDGRID_API_KEY && process.env.EMAIL_FROM);
+          if (!process.env.SENDGRID_API_KEY) missingEmailConfig.push('SENDGRID_API_KEY');
+          if (!process.env.EMAIL_FROM) missingEmailConfig.push('EMAIL_FROM');
+        } else if (emailProvider === 'dev') {
           emailConfigured = true;
         }
 
@@ -574,7 +678,7 @@ function careqOtpAuthPlugin() {
           smsConfigured = Boolean(process.env.MSG91_AUTH_KEY && process.env.MSG91_TEMPLATE_ID);
           if (!process.env.MSG91_AUTH_KEY) missingSmsConfig.push('MSG91_AUTH_KEY');
           if (!process.env.MSG91_TEMPLATE_ID) missingSmsConfig.push('MSG91_TEMPLATE_ID');
-        } else {
+        } else if (smsProvider === 'dev') {
           smsConfigured = true;
         }
 
@@ -587,370 +691,590 @@ function careqOtpAuthPlugin() {
           smsProvider,
           smsConfigured,
           missingSmsConfig,
-          isDevMode: emailProvider === 'dev' || smsProvider === 'dev'
+          isDevMode: (emailProvider === 'dev' || smsProvider === 'dev') && process.env.NODE_ENV !== 'production'
         }));
-      });
+      };
 
-      // 2. GET /api/dev/inbox
-      server.middlewares.use('/api/dev/inbox', (req: any, res: any, next: any) => {
-        if (req.method !== 'GET') return next();
+      // 1. EMAIL OTP REQUEST: POST /auth/login/request-otp (and aliases)
+      const handleEmailOtpRequest = async (req: any, res: any) => {
         res.setHeader('Content-Type', 'application/json');
-        res.statusCode = 200;
-        res.end(JSON.stringify({
-          success: true,
-          dispatches: devDispatchLogs,
-          messages: devDispatchLogs.map(d => ({
-            id: d.id,
-            type: d.type,
-            to: d.recipient,
-            code: d.devOtpRef,
-            timestamp: d.timestamp,
-            details: d.details
-          }))
-        }));
-      });
+        try {
+          const data = await parseJsonBody(req);
+          const email = (data.email || '').trim().toLowerCase();
 
-      // 3. POST /api/auth/email/send-otp
-      server.middlewares.use('/api/auth/email/send-otp', (req: any, res: any, next: any) => {
-        if (req.method !== 'POST') return next();
-
-        let body = '';
-        req.on('data', (chunk: any) => { body += chunk; });
-        req.on('end', async () => {
-          res.setHeader('Content-Type', 'application/json');
-          try {
-            const data = JSON.parse(body || '{}');
-            const email = (data.email || '').trim().toLowerCase();
-            const purpose: 'login' | 'signup' = data.purpose === 'signup' ? 'signup' : 'login';
-            const role = data.role || 'PATIENT';
-
-            if (!email || !email.includes('@')) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ success: false, error: 'Valid email address is required.' }));
-              return;
-            }
-
-            const existing = emailOtpStore.get(email);
-            const now = Date.now();
-            if (existing && now < existing.resendAvailableAt) {
-              const remainingSec = Math.ceil((existing.resendAvailableAt - now) / 1000);
-              res.statusCode = 429;
-              res.end(JSON.stringify({
-                success: false,
-                error: `Please wait ${remainingSec} seconds before requesting another verification code.`,
-                cooldownSeconds: remainingSec
-              }));
-              return;
-            }
-
-            const rawOtp = generateSecureOtp();
-            const salt = crypto.randomBytes(16).toString('hex');
-            const otpHash = hashOtp(rawOtp, salt);
-
-            const dispatchResult = await dispatchEmailOtp(email, rawOtp, purpose);
-
-            if (!dispatchResult.success) {
-              res.statusCode = 503;
-              res.end(JSON.stringify({
-                success: false,
-                error: dispatchResult.error || 'Email verification service is not configured.',
-                missingConfig: dispatchResult.missingConfig || []
-              }));
-              return;
-            }
-
-            emailOtpStore.set(email, {
-              email,
-              otpHash,
-              salt,
-              attempts: 0,
-              maxAttempts: 5,
-              expiresAt: now + 5 * 60 * 1000,
-              resendAvailableAt: now + 60 * 1000,
-              purpose,
-              role,
-              createdAt: now
-            });
-
-            res.statusCode = 200;
-            res.end(JSON.stringify({
-              success: true,
-              message: `A 6-digit verification code has been dispatched to ${maskEmail(email)}.`,
-              maskedEmail: maskEmail(email),
-              cooldownSeconds: 60,
-              expiresInSeconds: 300,
-              provider: dispatchResult.provider,
-              devPreviewToken: dispatchResult.provider === 'dev' ? rawOtp : undefined
-            }));
-          } catch {
+          // Step 1: Validate email
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             res.statusCode = 400;
-            res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+            res.end(JSON.stringify({
+              success: false,
+              code: 'INVALID_EMAIL_FORMAT',
+              error: 'Please enter a valid email address.'
+            }));
+            return;
           }
-        });
-      });
 
-      // 4. POST /api/auth/email/verify-otp
-      server.middlewares.use('/api/auth/email/verify-otp', (req: any, res: any, next: any) => {
-        if (req.method !== 'POST') return next();
+          // Step 2: Locate account
+          const account = REGISTERED_ACCOUNTS.find(a => a.email.toLowerCase() === email);
+          if (!account) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'ACCOUNT_NOT_FOUND',
+              error: 'No account found matching this email address. Please register or verify the entered address.'
+            }));
+            return;
+          }
 
-        let body = '';
-        req.on('data', (chunk: any) => { body += chunk; });
-        req.on('end', () => {
-          res.setHeader('Content-Type', 'application/json');
-          try {
-            const data = JSON.parse(body || '{}');
-            const email = (data.email || '').trim().toLowerCase();
-            const inputOtp = (data.otp || '').trim();
+          // Step 3 & 4: Rate Limiting
+          const now = Date.now();
+          const existing = emailOtpStore.get(email);
 
-            if (!email || !inputOtp) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ success: false, error: 'Email and 6-digit OTP code are required.' }));
-              return;
-            }
+          // Cooldown check (60s)
+          if (existing && now < existing.resendAvailableAt) {
+            const remainingSec = Math.ceil((existing.resendAvailableAt - now) / 1000);
+            res.statusCode = 429;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'COOLDOWN_ACTIVE',
+              error: `Please wait ${remainingSec} seconds before requesting another verification code.`,
+              cooldownSeconds: remainingSec
+            }));
+            return;
+          }
 
-            const record = emailOtpStore.get(email);
-            const now = Date.now();
+          // 15-minute sliding window check
+          if (!checkRateLimit(`email:${email}`, 5, 15 * 60 * 1000)) {
+            res.statusCode = 429;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'RATE_LIMIT_EXCEEDED',
+              error: 'Too many OTP requests for this account. Please wait 15 minutes before trying again.'
+            }));
+            return;
+          }
 
-            if (!record) {
-              res.statusCode = 404;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'No active verification code found for this email. Please request a new code.'
-              }));
-              return;
-            }
+          // Step 5: Cryptographically secure 6-digit random OTP
+          const rawOtp = generateSecureOtp();
+          const salt = crypto.randomBytes(16).toString('hex');
+          const otpHash = hashOtp(rawOtp, salt);
 
-            if (now > record.expiresAt) {
-              emailOtpStore.delete(email);
-              res.statusCode = 410;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'This verification code has expired. Please request a new code.'
-              }));
-              return;
-            }
+          // Step 6: Dispatch via real transactional email provider
+          const dispatchResult = await dispatchEmailOtp(email, rawOtp, 'login');
 
-            if (record.attempts >= record.maxAttempts) {
-              emailOtpStore.delete(email);
-              res.statusCode = 429;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'Too many failed verification attempts. Please request a new code.'
-              }));
-              return;
-            }
+          if (!dispatchResult.success) {
+            res.statusCode = 503;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'PROVIDER_NOT_CONFIGURED',
+              error: dispatchResult.error || 'Email verification service is not configured.',
+              missingConfig: dispatchResult.missingConfig || []
+            }));
+            return;
+          }
 
-            const computedHash = hashOtp(inputOtp, record.salt);
-            if (computedHash !== record.otpHash) {
-              record.attempts += 1;
-              const remaining = record.maxAttempts - record.attempts;
-              res.statusCode = 401;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'The verification code is incorrect. Please try again.',
-                attemptsRemaining: remaining
-              }));
-              return;
-            }
+          // Step 7: Store ONLY secure representation/hash of the OTP (Never plaintext)
+          emailOtpStore.set(email, {
+            email,
+            otpHash,
+            salt,
+            attempts: 0,
+            maxAttempts: 3, // strictly 3 attempts
+            expiresAt: now + 5 * 60 * 1000, // 5 minutes expiration
+            resendAvailableAt: now + 60 * 1000, // 60s cooldown
+            account,
+            createdAt: now
+          });
 
+          // Step 8: Return only safe metadata (Never the OTP)
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            success: true,
+            message: `A 6-digit verification code has been dispatched to ${maskEmail(email)}.`,
+            maskedEmail: maskEmail(email),
+            cooldownSeconds: 60,
+            expiresInSeconds: 300,
+            provider: dispatchResult.provider
+          }));
+        } catch {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+        }
+      };
+
+      // 2. EMAIL OTP VERIFY: POST /auth/login/verify-otp (and aliases)
+      const handleEmailOtpVerify = async (req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        try {
+          const data = await parseJsonBody(req);
+          const email = (data.email || '').trim().toLowerCase();
+          const inputOtp = (data.otp || '').trim();
+
+          if (!email || !inputOtp || inputOtp.length !== 6) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'INVALID_INPUT',
+              error: 'A valid email and complete 6-digit verification code are required.'
+            }));
+            return;
+          }
+
+          const record = emailOtpStore.get(email);
+          const now = Date.now();
+
+          // Validate attempt exists
+          if (!record) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'OTP_NOT_FOUND',
+              error: 'No active verification code found for this email. Please request a new code.'
+            }));
+            return;
+          }
+
+          // Check expiration (~5 minutes)
+          if (now > record.expiresAt) {
             emailOtpStore.delete(email);
-
-            const sessionToken = `SES-EML-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
-            const isDoctor = email.includes('dr.') || email.includes('doctor') || record.role === 'HEALTHCARE_PROFESSIONAL';
-            const role = isDoctor ? 'HEALTHCARE_PROFESSIONAL' : 'PATIENT';
-
-            res.statusCode = 200;
+            res.statusCode = 410;
             res.end(JSON.stringify({
-              success: true,
-              verified: true,
-              sessionToken,
-              role,
-              email,
-              patientId: role === 'PATIENT' ? 'PAT-2026-00124' : undefined,
-              professionalId: role === 'HEALTHCARE_PROFESSIONAL' ? 'PROF-DEMO-00451' : undefined,
-              userName: isDoctor ? 'Dr. Ananya Sharma' : 'Riya Das',
-              message: 'Email successfully verified. Authorized session created.'
+              success: false,
+              code: 'OTP_EXPIRED',
+              error: 'This verification code has expired. Please request a new code.'
             }));
-          } catch {
-            res.statusCode = 400;
-            res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+            return;
           }
-        });
-      });
 
-      // 5. POST /api/auth/mobile/send-otp
-      server.middlewares.use('/api/auth/mobile/send-otp', (req: any, res: any, next: any) => {
-        if (req.method !== 'POST') return next();
+          // Check max attempts
+          if (record.attempts >= record.maxAttempts) {
+            emailOtpStore.delete(email);
+            res.statusCode = 429;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'TOO_MANY_ATTEMPTS',
+              error: 'Too many failed verification attempts. Please request a new code.'
+            }));
+            return;
+          }
 
-        let body = '';
-        req.on('data', (chunk: any) => { body += chunk; });
-        req.on('end', async () => {
-          res.setHeader('Content-Type', 'application/json');
-          try {
-            const data = JSON.parse(body || '{}');
-            const sessionId = (data.sessionId || '').trim();
-            const currentRole = data.currentRole;
-            const targetRole = data.targetRole;
-            const mobileNumber = (data.mobileNumber || '+91 98765 43210').trim();
-            const clinicalJustification = data.clinicalJustification;
-
-            if (!sessionId || !targetRole) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ success: false, error: 'Active session ID and target role are required.' }));
-              return;
-            }
-
-            if (currentRole === targetRole) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ success: false, error: 'Target workspace must be different from current workspace.' }));
-              return;
-            }
-
-            const now = Date.now();
-            const existing = mobileOtpStore.get(sessionId);
-            if (existing && now < existing.resendAvailableAt) {
-              const remainingSec = Math.ceil((existing.resendAvailableAt - now) / 1000);
+          // Validate secure hash
+          const computedHash = hashOtp(inputOtp, record.salt);
+          if (computedHash !== record.otpHash) {
+            record.attempts += 1;
+            const remaining = record.maxAttempts - record.attempts;
+            if (remaining <= 0) {
+              emailOtpStore.delete(email);
               res.statusCode = 429;
               res.end(JSON.stringify({
                 success: false,
-                error: `Please wait ${remainingSec} seconds before requesting another SMS code.`,
-                cooldownSeconds: remainingSec
+                code: 'TOO_MANY_ATTEMPTS',
+                error: 'Too many failed verification attempts. Please request a new code.',
+                attemptsRemaining: 0
               }));
               return;
             }
-
-            const rawOtp = generateSecureOtp();
-            const salt = crypto.randomBytes(16).toString('hex');
-            const otpHash = hashOtp(rawOtp, salt);
-
-            const dispatchResult = await dispatchMobileOtp(mobileNumber, rawOtp, `${currentRole} -> ${targetRole}`);
-
-            if (!dispatchResult.success) {
-              res.statusCode = 503;
-              res.end(JSON.stringify({
-                success: false,
-                error: dispatchResult.error || 'Mobile verification service is not configured.',
-                missingConfig: dispatchResult.missingConfig || []
-              }));
-              return;
-            }
-
-            mobileOtpStore.set(sessionId, {
-              sessionId,
-              mobileNumber,
-              otpHash,
-              salt,
-              attempts: 0,
-              maxAttempts: 5,
-              expiresAt: now + 5 * 60 * 1000,
-              resendAvailableAt: now + 60 * 1000,
-              currentRole,
-              targetRole,
-              clinicalJustification,
-              createdAt: now
-            });
-
-            res.statusCode = 200;
+            res.statusCode = 401;
             res.end(JSON.stringify({
-              success: true,
-              message: `Verification code dispatched to your registered mobile number: ${maskMobile(mobileNumber)}.`,
-              maskedMobile: maskMobile(mobileNumber),
-              cooldownSeconds: 60,
-              expiresInSeconds: 300,
-              provider: dispatchResult.provider,
-              devPreviewToken: dispatchResult.provider === 'dev' ? rawOtp : undefined
+              success: false,
+              code: 'INCORRECT_OTP',
+              error: 'The verification code is incorrect. Please try again.',
+              attemptsRemaining: remaining
             }));
-          } catch {
-            res.statusCode = 400;
-            res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+            return;
           }
-        });
-      });
 
-      // 6. POST /api/auth/mobile/verify-otp
-      server.middlewares.use('/api/auth/mobile/verify-otp', (req: any, res: any, next: any) => {
-        if (req.method !== 'POST') return next();
+          // Single-use: delete immediately to prevent reuse
+          emailOtpStore.delete(email);
 
-        let body = '';
-        req.on('data', (chunk: any) => { body += chunk; });
-        req.on('end', () => {
-          res.setHeader('Content-Type', 'application/json');
-          try {
-            const data = JSON.parse(body || '{}');
-            const sessionId = (data.sessionId || '').trim();
-            const inputOtp = (data.otp || '').trim();
-            const targetRole = data.targetRole;
+          // Create authenticated session
+          const sessionToken = `SES-EML-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(12).toString('hex').toUpperCase()}`;
+          const account = record.account;
+          const role = account.role;
+          const identityId = role === 'PATIENT' ? (account.patientId || 'PAT-2026-00124') : (account.professionalId || 'PROF-DEMO-00451');
 
-            if (!sessionId || !inputOtp) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ success: false, error: 'Session ID and 6-digit Mobile OTP are required.' }));
-              return;
-            }
+          const patientPerms = [
+            'patient:self:read', 'patient:self:update', 'patient:self:assessment:create',
+            'patient:self:assessment:read', 'patient:self:voice:create', 'patient:self:reports:read',
+            'patient:self:timeline:read', 'patient:self:followup:read', 'patient:self:followup:respond',
+            'patient:self:consent:read', 'patient:self:consent:update', 'patient:self:referral:read'
+          ];
+          const professionalPerms = [
+            'clinical:queue:read', 'clinical:priority:read', 'clinical:case:read',
+            'clinical:case:review', 'clinical:case:update', 'clinical:case:request_information',
+            'clinical:case:priority', 'clinical:referral:create', 'clinical:referral:read',
+            'clinical:notes:create', 'clinical:timeline:read', 'clinical:reports:read',
+            'clinical:consent:read', 'clinical:audit:read'
+          ];
 
-            const record = mobileOtpStore.get(sessionId);
-            const now = Date.now();
+          const permissions = role === 'PATIENT' ? patientPerms : professionalPerms;
 
-            if (!record) {
-              res.statusCode = 404;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'No active mobile verification session found. Please request a new verification code.'
-              }));
-              return;
-            }
+          // Register in server active session store
+          activeSessionsStore.set(sessionToken, {
+            sessionId: sessionToken,
+            userId: account.userId,
+            role,
+            identityId,
+            permissions,
+            issuedAt: now,
+            expiresAt: now + 8 * 3600 * 1000,
+            verifiedRoles: account.verifiedRoles,
+            authAssuranceLevel: 'STANDARD',
+            account
+          });
 
-            if (now > record.expiresAt) {
-              mobileOtpStore.delete(sessionId);
-              res.statusCode = 410;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'This verification code has expired. Request a new code.'
-              }));
-              return;
-            }
+          // Return only necessary session information
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            success: true,
+            verified: true,
+            sessionToken,
+            role,
+            email: account.email,
+            userId: account.userId,
+            patientId: account.patientId,
+            professionalId: account.professionalId,
+            userName: account.name,
+            permissions,
+            message: 'Email successfully verified. Authorized session created.'
+          }));
+        } catch {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+        }
+      };
 
-            if (record.attempts >= record.maxAttempts) {
-              mobileOtpStore.delete(sessionId);
-              res.statusCode = 429;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'Too many verification attempts. Please request a new code.'
-              }));
-              return;
-            }
+      // 3. MOBILE OTP REQUEST: POST /auth/workspace/request-otp (and aliases)
+      const handleMobileOtpRequest = async (req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        try {
+          const data = await parseJsonBody(req);
+          const sessionId = req.headers['x-careq-session-id'] || data.sessionId;
+          const targetRole = data.targetRole;
+          const clinicalJustification = data.clinicalJustification;
 
-            const computedHash = hashOtp(inputOtp, record.salt);
-            if (computedHash !== record.otpHash) {
-              record.attempts += 1;
-              const remaining = record.maxAttempts - record.attempts;
-              res.statusCode = 401;
-              res.end(JSON.stringify({
-                success: false,
-                error: 'The verification code is incorrect. Please try again.',
-                attemptsRemaining: remaining
-              }));
-              return;
-            }
+          if (!sessionId) {
+            res.statusCode = 401;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'SESSION_REQUIRED',
+              error: 'Active authenticated session required to request workspace transition.'
+            }));
+            return;
+          }
 
+          // Validate current session exists
+          const currentSession = activeSessionsStore.get(sessionId);
+          if (!currentSession || Date.now() > currentSession.expiresAt) {
+            res.statusCode = 401;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'SESSION_INVALID_OR_EXPIRED',
+              error: 'Your session has expired. Please log in again.'
+            }));
+            return;
+          }
+
+          if (!targetRole || targetRole === currentSession.role) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'INVALID_TARGET_ROLE',
+              error: 'Target workspace must be different from your active workspace.'
+            }));
+            return;
+          }
+
+          // Backend confirms that the user has a verified target identity
+          if (!currentSession.verifiedRoles.includes(targetRole)) {
+            res.statusCode = 403;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'UNAUTHORIZED_TARGET_ROLE',
+              error: `Access restricted: Your account does not possess a verified ${targetRole === 'HEALTHCARE_PROFESSIONAL' ? 'Healthcare Professional' : 'Patient'} identity.`
+            }));
+            return;
+          }
+
+          // Section 5: Check VERIFIED MOBILE NUMBER
+          const account = currentSession.account;
+          if (!account.mobileVerified || !account.mobileNumber) {
+            res.statusCode = 403;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'MOBILE_NOT_VERIFIED',
+              error: 'Your account does not have a verified mobile number. Verify your mobile number before switching workspaces.'
+            }));
+            return;
+          }
+
+          const now = Date.now();
+          const existing = mobileOtpStore.get(sessionId);
+
+          // Cooldown check (60s)
+          if (existing && now < existing.resendAvailableAt) {
+            const remainingSec = Math.ceil((existing.resendAvailableAt - now) / 1000);
+            res.statusCode = 429;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'COOLDOWN_ACTIVE',
+              error: `Please wait ${remainingSec} seconds before requesting another SMS code.`,
+              cooldownSeconds: remainingSec
+            }));
+            return;
+          }
+
+          // Rate limit check
+          if (!checkRateLimit(`mobile:${account.mobileNumber}`, 5, 15 * 60 * 1000)) {
+            res.statusCode = 429;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'RATE_LIMIT_EXCEEDED',
+              error: 'Too many SMS requests for this phone number. Please wait 15 minutes.'
+            }));
+            return;
+          }
+
+          // Generate 6-digit random OTP
+          const rawOtp = generateSecureOtp();
+          const salt = crypto.randomBytes(16).toString('hex');
+          const otpHash = hashOtp(rawOtp, salt);
+
+          // Dispatch through real transactional SMS provider
+          const dispatchResult = await dispatchMobileOtp(
+            account.mobileNumber,
+            rawOtp,
+            `${currentSession.role} -> ${targetRole}`
+          );
+
+          if (!dispatchResult.success) {
+            res.statusCode = 503;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'PROVIDER_NOT_CONFIGURED',
+              error: dispatchResult.error || 'SMS verification service is not configured.',
+              missingConfig: dispatchResult.missingConfig || []
+            }));
+            return;
+          }
+
+          // Store ONLY hash of the OTP
+          mobileOtpStore.set(sessionId, {
+            sessionId,
+            userId: account.userId,
+            mobileNumber: account.mobileNumber,
+            otpHash,
+            salt,
+            attempts: 0,
+            maxAttempts: 3, // strictly 3 attempts
+            expiresAt: now + 5 * 60 * 1000, // 5 min
+            resendAvailableAt: now + 60 * 1000, // 60s cooldown
+            currentRole: currentSession.role,
+            targetRole,
+            clinicalJustification,
+            createdAt: now
+          });
+
+          // Return masked number only (NEVER the OTP)
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            success: true,
+            message: `Verification code sent to your verified mobile number: ${maskMobile(account.mobileNumber)}.`,
+            maskedMobile: maskMobile(account.mobileNumber),
+            cooldownSeconds: 60,
+            expiresInSeconds: 300,
+            provider: dispatchResult.provider
+          }));
+        } catch {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+        }
+      };
+
+      // 4. MOBILE OTP VERIFY: POST /auth/workspace/verify-otp (and aliases)
+      const handleMobileOtpVerify = async (req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        try {
+          const data = await parseJsonBody(req);
+          const sessionId = req.headers['x-careq-session-id'] || data.sessionId;
+          const inputOtp = (data.otp || '').trim();
+          const targetRole = data.targetRole;
+
+          if (!sessionId || !inputOtp || inputOtp.length !== 6) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'INVALID_INPUT',
+              error: 'Session ID and 6-digit Mobile OTP are required.'
+            }));
+            return;
+          }
+
+          const record = mobileOtpStore.get(sessionId);
+          const now = Date.now();
+
+          if (!record) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'OTP_NOT_FOUND',
+              error: 'No active mobile verification session found. Please request a new verification code.'
+            }));
+            return;
+          }
+
+          // Check expiration
+          if (now > record.expiresAt) {
             mobileOtpStore.delete(sessionId);
-
-            const newSessionId = `SES-MOB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
-
-            res.statusCode = 200;
+            res.statusCode = 410;
             res.end(JSON.stringify({
-              success: true,
-              verified: true,
-              targetRole: record.targetRole || targetRole,
-              newSessionId,
-              sessionToken: newSessionId,
-              clinicalJustification: record.clinicalJustification,
-              message: 'Mobile number verified. Previous workspace terminated and new workspace session authorized.'
+              success: false,
+              code: 'OTP_EXPIRED',
+              error: 'This verification code has expired. Request a new code.'
             }));
-          } catch {
-            res.statusCode = 400;
-            res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+            return;
           }
-        });
+
+          // Check maximum attempts
+          if (record.attempts >= record.maxAttempts) {
+            mobileOtpStore.delete(sessionId);
+            res.statusCode = 429;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'TOO_MANY_ATTEMPTS',
+              error: 'Too many verification attempts. Please request a new code.'
+            }));
+            return;
+          }
+
+          // Validate hash
+          const computedHash = hashOtp(inputOtp, record.salt);
+          if (computedHash !== record.otpHash) {
+            record.attempts += 1;
+            const remaining = record.maxAttempts - record.attempts;
+            if (remaining <= 0) {
+              mobileOtpStore.delete(sessionId);
+              res.statusCode = 429;
+              res.end(JSON.stringify({
+                success: false,
+                code: 'TOO_MANY_ATTEMPTS',
+                error: 'Too many verification attempts. Please request a new code.',
+                attemptsRemaining: 0
+              }));
+              return;
+            }
+            res.statusCode = 401;
+            res.end(JSON.stringify({
+              success: false,
+              code: 'INCORRECT_OTP',
+              error: 'The verification code is incorrect. Please try again.',
+              attemptsRemaining: remaining
+            }));
+            return;
+          }
+
+          // Single-use: delete mobile OTP record
+          mobileOtpStore.delete(sessionId);
+
+          // Get old session to terminate
+          const oldSession = activeSessionsStore.get(sessionId);
+          const account = oldSession?.account || REGISTERED_ACCOUNTS[0];
+
+          // Invalidate/terminate old session
+          activeSessionsStore.delete(sessionId);
+
+          // Establish new role-scoped session with HIGH_ASSURANCE
+          const effectiveTargetRole: 'PATIENT' | 'HEALTHCARE_PROFESSIONAL' = record.targetRole as any || targetRole;
+          const newSessionToken = `SES-MOB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(12).toString('hex').toUpperCase()}`;
+          const identityId = effectiveTargetRole === 'PATIENT' ? (account.patientId || 'PAT-2026-00124') : (account.professionalId || 'PROF-DEMO-00451');
+
+          const patientPerms = [
+            'patient:self:read', 'patient:self:update', 'patient:self:assessment:create',
+            'patient:self:assessment:read', 'patient:self:voice:create', 'patient:self:reports:read',
+            'patient:self:timeline:read', 'patient:self:followup:read', 'patient:self:followup:respond',
+            'patient:self:consent:read', 'patient:self:consent:update', 'patient:self:referral:read'
+          ];
+          const professionalPerms = [
+            'clinical:queue:read', 'clinical:priority:read', 'clinical:case:read',
+            'clinical:case:review', 'clinical:case:update', 'clinical:case:request_information',
+            'clinical:case:priority', 'clinical:referral:create', 'clinical:referral:read',
+            'clinical:notes:create', 'clinical:timeline:read', 'clinical:reports:read',
+            'clinical:consent:read', 'clinical:audit:read'
+          ];
+          const newPermissions = effectiveTargetRole === 'PATIENT' ? patientPerms : professionalPerms;
+
+          activeSessionsStore.set(newSessionToken, {
+            sessionId: newSessionToken,
+            userId: account.userId,
+            role: effectiveTargetRole,
+            identityId,
+            permissions: newPermissions,
+            issuedAt: now,
+            expiresAt: now + 8 * 3600 * 1000,
+            verifiedRoles: account.verifiedRoles,
+            authAssuranceLevel: 'HIGH_ASSURANCE',
+            account
+          });
+
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            success: true,
+            verified: true,
+            targetRole: effectiveTargetRole,
+            newSessionId: newSessionToken,
+            sessionToken: newSessionToken,
+            permissions: newPermissions,
+            authAssuranceLevel: 'HIGH_ASSURANCE',
+            clinicalJustification: record.clinicalJustification,
+            message: 'Mobile number verified. Previous workspace terminated and new workspace session authorized.'
+          }));
+        } catch {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ success: false, error: 'Invalid request payload.' }));
+        }
+      };
+
+      // Register universal route mappings
+      server.middlewares.use((req: any, res: any, next: any) => {
+        const url = req.url?.split('?')[0] || '';
+
+        // 1. Config status
+        if ((url === '/auth/config-status' || url === '/api/auth/config-status') && req.method === 'GET') {
+          return handleConfigStatus(req, res);
+        }
+
+        // 2. Email OTP Request: POST /auth/login/request-otp (and aliases)
+        if (
+          (url === '/auth/login/request-otp' || url === '/api/auth/login/request-otp' || url === '/api/auth/email/send-otp') &&
+          req.method === 'POST'
+        ) {
+          return handleEmailOtpRequest(req, res);
+        }
+
+        // 3. Email OTP Verify: POST /auth/login/verify-otp (and aliases)
+        if (
+          (url === '/auth/login/verify-otp' || url === '/api/auth/login/verify-otp' || url === '/api/auth/email/verify-otp') &&
+          req.method === 'POST'
+        ) {
+          return handleEmailOtpVerify(req, res);
+        }
+
+        // 4. Mobile OTP Request: POST /auth/workspace/request-otp (and aliases)
+        if (
+          (url === '/auth/workspace/request-otp' || url === '/api/auth/workspace/request-otp' || url === '/api/auth/mobile/send-otp') &&
+          req.method === 'POST'
+        ) {
+          return handleMobileOtpRequest(req, res);
+        }
+
+        // 5. Mobile OTP Verify: POST /auth/workspace/verify-otp (and aliases)
+        if (
+          (url === '/auth/workspace/verify-otp' || url === '/api/auth/workspace/verify-otp' || url === '/api/auth/mobile/verify-otp') &&
+          req.method === 'POST'
+        ) {
+          return handleMobileOtpVerify(req, res);
+        }
+
+        next();
       });
     }
   };

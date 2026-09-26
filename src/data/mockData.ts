@@ -12,6 +12,7 @@ export const MOCK_PATIENTS: PatientUser[] = [
     preferredLanguage: 'Odia',
     demoAadhaarLast4: '1234',
     isVerified: true,
+    mobileVerified: true,
     consentGiven: true,
     consentCategories: {
       symptoms: true,
@@ -35,6 +36,7 @@ export const MOCK_PATIENTS: PatientUser[] = [
     preferredLanguage: 'Hindi',
     demoAadhaarLast4: '8842',
     isVerified: true,
+    mobileVerified: true,
     consentGiven: true,
     consentCategories: {
       symptoms: true,
@@ -58,6 +60,7 @@ export const MOCK_PATIENTS: PatientUser[] = [
     preferredLanguage: 'Bengali',
     demoAadhaarLast4: '4491',
     isVerified: true,
+    mobileVerified: false, // For testing unverified mobile error condition
     consentGiven: true,
     consentCategories: {
       symptoms: true,
@@ -113,6 +116,7 @@ export const MOCK_DOCTORS: DoctorUser[] = [
     phone: '+91 94370 12399',
     email: 'dr.ananya.sharma@careq-health.gov.in',
     isVerified: true,
+    mobileVerified: true,
     specialization: 'General Medicine & Triage Care'
   },
   {
@@ -127,6 +131,7 @@ export const MOCK_DOCTORS: DoctorUser[] = [
     phone: '+91 94372 99881',
     email: 'dr.arjun.mehta@careq-health.gov.in',
     isVerified: true,
+    mobileVerified: true,
     specialization: 'Emergency & Critical Care'
   },
   {
