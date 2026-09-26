@@ -26,8 +26,6 @@ import {
   ShieldCheck,
   Play,
   Pause,
-  AlertTriangle,
-  HelpCircle,
   FileCheck,
   Plus,
   Eye,
@@ -36,7 +34,6 @@ import {
   Stethoscope,
   Building,
   Calendar,
-  ExternalLink,
   Copy,
   Edit3
 } from 'lucide-react';
@@ -74,20 +71,6 @@ export const NewAssessmentPage: React.FC = () => {
     'ମୋର ଦୁଇ ଦିନ ହେଲା ପ୍ରବଳ ଜ୍ୱର ଓ କାଶ ହେଉଛି। ଆଜି ସକାଳୁ ଛାତି ଟିକେ ଭାରି ଲାଗୁଛି ଏବଂ ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ ହେଉଛି।'
   );
 
-  // Sync when global locale changes
-  useEffect(() => {
-    if (locale === 'or-IN') {
-      handleApplyPreset('Odia');
-    } else if (locale === 'hi-IN') {
-      handleApplyPreset('Hindi');
-    } else if (locale === 'bn-IN') {
-      handleApplyPreset('Bengali');
-    } else if (locale === 'te-IN') {
-      handleApplyPreset('Telugu');
-    } else {
-      handleApplyPreset('English');
-    }
-  }, [locale]);
 
   // Real Microphone Capture State
   const [voiceState, setVoiceState] = useState<'idle' | 'requesting' | 'recording' | 'processing' | 'captured' | 'error'>('captured');
@@ -96,7 +79,7 @@ export const NewAssessmentPage: React.FC = () => {
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [micError, setMicError] = useState<string | null>(null);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
-  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [_recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number>(14);
 
   // Audio Playback State
@@ -457,6 +440,21 @@ export const NewAssessmentPage: React.FC = () => {
       setVoiceState('captured');
     }
   };
+
+  // Sync when global locale changes
+  useEffect(() => {
+    if (locale === 'or-IN') {
+      handleApplyPreset('Odia');
+    } else if (locale === 'hi-IN') {
+      handleApplyPreset('Hindi');
+    } else if (locale === 'bn-IN') {
+      handleApplyPreset('Bengali');
+    } else if (locale === 'te-IN') {
+      handleApplyPreset('Telugu');
+    } else {
+      handleApplyPreset('English');
+    }
+  }, [locale]);
 
   // Multi-format File Handling via Neural OCR Service (PDF, JPG, PNG, WEBP)
   const handleFiles = async (files: FileList | File[]) => {

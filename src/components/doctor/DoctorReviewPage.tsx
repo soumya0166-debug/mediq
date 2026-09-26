@@ -3,11 +3,6 @@ import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { 
-  ShieldCheck, 
-  User, 
-  FileText, 
-  Mic, 
-  Image as ImageIcon, 
   Clock, 
   AlertCircle, 
   HelpCircle, 
@@ -16,23 +11,11 @@ import {
   Share2, 
   ArrowLeft, 
   MessageSquare, 
-  FileCheck, 
-  AlertTriangle,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  Volume2,
-  Calendar,
-  Send,
-  Eye,
-  X,
-  ExternalLink,
-  Edit2,
-  Trash2,
-  Check,
-  Play,
-  Pause,
-  RotateCcw
+  Volume2, 
+  Eye, 
+  X, 
+  Play, 
+  Pause
 } from 'lucide-react';
 import { RiskBadge } from '../common/RiskBadge';
 import { SourceTraceItem } from '../../types';
@@ -43,7 +26,6 @@ export const DoctorReviewPage: React.FC = () => {
     navigate, 
     markAssessmentReviewed, 
     requestFollowUp, 
-    markQuestionAnswered,
     updateAssessment
   } = useApp();
   const { t } = useLanguage();

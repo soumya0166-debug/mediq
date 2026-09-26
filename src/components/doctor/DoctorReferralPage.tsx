@@ -15,8 +15,7 @@ import {
   FileCheck,
   Send,
   Save,
-  CheckCircle2,
-  FileText
+  CheckCircle2
 } from 'lucide-react';
 
 export const DoctorReferralPage: React.FC = () => {
