@@ -273,11 +273,12 @@ export const AuthGateway: React.FC = () => {
             <div className="space-y-6 animate-in fade-in duration-200">
               
               <div className="space-y-1 text-center">
+                <span className="text-xs font-bold uppercase tracking-widest text-teal-700">CAREQ</span>
                 <h2 className="text-xl font-extrabold text-[#0A1E3F] tracking-tight">
-                  {t('auth.gatewayTitle') || 'Sign in to CAREQ'}
+                  {t('auth.secureSignIn') || 'Secure sign in'}
                 </h2>
                 <p className="text-xs text-slate-600">
-                  {t('auth.gatewaySubtitle') || 'Secure access to your CAREQ healthcare workspace.'}
+                  {t('auth.connectedHealthTagline') || 'Connected health information. Faster clinical review.'}
                 </p>
               </div>
 
@@ -316,7 +317,7 @@ export const AuthGateway: React.FC = () => {
                       autoComplete="email"
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
-                      placeholder={t('auth.emailPlaceholder') || 'name@careq-health.gov.in'}
+                      placeholder={t('auth.enterYourEmail') || 'Enter your email'}
                       disabled={isSending}
                       className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-700 focus:bg-white transition-all text-slate-900 placeholder:text-slate-400"
                     />
@@ -511,10 +512,10 @@ export const AuthGateway: React.FC = () => {
               
               <div className="space-y-1 text-center">
                 <h2 className="text-xl font-extrabold text-[#0A1E3F] tracking-tight">
-                  {t('auth.verifyEmailHeading') || 'Verify your email'}
+                  {t('auth.checkYourEmail') || 'Check your email'}
                 </h2>
                 <p className="text-xs text-slate-600">
-                  {t('auth.verifyEmailInstruction') || 'Enter the 6-digit verification code sent to your email.'}
+                  {t('auth.sentCodeInstruction') || 'We sent a 6-digit verification code to'}
                 </p>
               </div>
 
@@ -533,7 +534,7 @@ export const AuthGateway: React.FC = () => {
                   className="text-xs text-teal-800 hover:text-teal-900 font-bold hover:underline flex items-center gap-1"
                 >
                   <ArrowLeft className="w-3 h-3" />
-                  <span>{t('auth.changeEmail') || 'Change'}</span>
+                  <span>{t('auth.changeEmail') || 'Change email'}</span>
                 </button>
               </div>
 
@@ -562,6 +563,11 @@ export const AuthGateway: React.FC = () => {
 
               {/* 6-Digit OTP Entry Boxes */}
               <div className="space-y-3">
+                <div className="text-center">
+                  <label className="text-xs font-bold text-slate-700">
+                    {t('auth.enterVerificationCode') || 'Enter verification code'}
+                  </label>
+                </div>
                 <div className="flex justify-between gap-1.5 sm:gap-2 max-w-xs mx-auto">
                   {otpDigits.map((digit, idx) => (
                     <input
@@ -585,8 +591,8 @@ export const AuthGateway: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Expiration Countdown */}
-                <div className="flex items-center justify-between text-xs text-slate-500 px-1 pt-1">
+                {/* Expiration Countdown & Resend */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 px-1 pt-1">
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                     <span>{t('auth.codeExpiresIn') || 'Code expires in'}:</span>
@@ -595,17 +601,25 @@ export const AuthGateway: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Resend Action */}
-                  <button
-                    type="button"
-                    onClick={() => handleRequestOtp()}
-                    disabled={resendCooldown > 0 || isSending}
-                    className="font-bold text-teal-800 hover:text-teal-900 hover:underline disabled:opacity-40 disabled:no-underline"
-                  >
-                    {resendCooldown > 0 
-                      ? `${t('auth.resendCode') || 'Resend'} (${resendCooldown}s)`
-                      : t('auth.resendCode') || 'Resend Code'}
-                  </button>
+                  <div>
+                    {resendCooldown > 0 ? (
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        Resend available in {resendCooldown}s
+                      </span>
+                    ) : (
+                      <span className="text-slate-600 text-xs">
+                        Didn't receive the code?{' '}
+                        <button
+                          type="button"
+                          onClick={() => handleRequestOtp()}
+                          disabled={isSending}
+                          className="font-bold text-teal-800 hover:text-teal-900 hover:underline"
+                        >
+                          {t('auth.resendCode') || 'Resend code'}
+                        </button>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -619,12 +633,12 @@ export const AuthGateway: React.FC = () => {
                 {isVerifying ? (
                   <>
                     <RotateCw className="w-4 h-4 animate-spin text-teal-400" />
-                    <span>Verifying Code...</span>
+                    <span>Verifying and Continue...</span>
                   </>
                 ) : (
                   <>
                     <KeyRound className="w-4 h-4 text-teal-400" />
-                    <span>{t('auth.verifyAndContinue') || 'Verify & Sign In'}</span>
+                    <span>{t('auth.verifyAndContinue') || 'Verify and Continue'}</span>
                   </>
                 )}
               </button>

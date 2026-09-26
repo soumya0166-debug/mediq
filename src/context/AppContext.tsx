@@ -28,6 +28,8 @@ import {
   INITIAL_AUDIT_LOGS,
   CAREQ_FACILITIES
 } from '../data/mockData';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+
 
 const DEFAULT_PATIENT_IDENTITY: PatientIdentity = {
   userId: 'USR-DEMO-001',
@@ -176,29 +178,132 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDemoGuideOpen, setDemoGuideOpen] = useState(false);
   const [demoGuideStep, setDemoGuideStep] = useState(1);
 
-  // Validate active session token against server on initial mount
+  // Synchronize and restore authenticated session with Supabase Auth on initial mount / refresh
   useEffect(() => {
-    const validateServerSession = async () => {
-      const saved = sessionStorage.getItem('careq_session');
-      if (!saved) return;
+    let isMounted = true;
+
+    const syncSupabaseSession = async () => {
       try {
-        const parsed: AuthSession = JSON.parse(saved);
-        if (!parsed.sessionId) return;
-        const res = await fetch('/auth/session', {
-          headers: { 'Authorization': `Bearer ${parsed.sessionId}` }
-        });
-        const data = await res.json();
-        if (!data.authenticated) {
-          sessionStorage.removeItem('careq_session');
-          setCurrentSession(null);
-          setCurrentRoute('/auth');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Resolve authoritative profile from Supabase database
+          let { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (!profile && session.user.email) {
+            const { data: profileByEmail } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('email', session.user.email)
+              .maybeSingle();
+            profile = profileByEmail;
+          }
+
+          if (profile && isMounted) {
+            const role: UserRole = profile.role === 'HEALTHCARE_PROFESSIONAL' 
+              ? 'HEALTHCARE_PROFESSIONAL' 
+              : 'PATIENT';
+            const permissions = role === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
+
+            let pIdent = patientIdentity;
+            let dIdent = professionalIdentity;
+
+            if (role === 'PATIENT') {
+              pIdent = {
+                userId: session.user.id,
+                role: 'PATIENT',
+                patientId: profile.patient_id || 'PAT-2026-00124',
+                name: profile.name || 'Riya Das',
+                age: 28,
+                gender: 'Female',
+                phone: profile.phone || '+91 98765 43210',
+                verifiedStatus: 'VERIFIED'
+              };
+              setPatientIdentity(pIdent);
+              if (currentPatient) {
+                setCurrentPatient({
+                  ...currentPatient,
+                  id: pIdent.patientId,
+                  name: pIdent.name
+                });
+              }
+            } else {
+              dIdent = {
+                userId: session.user.id,
+                role: 'HEALTHCARE_PROFESSIONAL',
+                professionalId: profile.professional_id || 'PROF-DEMO-00451',
+                name: profile.name || 'Dr. Medical Officer',
+                title: 'Medical Officer',
+                facilityId: profile.facility_id || 'FAC-DEMO-OD-001',
+                facilityName: profile.facility_name || currentFacility,
+                medicalRegistrationId: 'NMC-84920',
+                state: 'Odisha',
+                verifiedStatus: 'VERIFIED'
+              };
+              setProfessionalIdentity(dIdent);
+              if (currentDoctor) {
+                setCurrentDoctor({
+                  ...currentDoctor,
+                  id: dIdent.professionalId,
+                  name: dIdent.name
+                });
+              }
+            }
+
+            const activeSession: AuthSession = {
+              sessionId: session.access_token,
+              userId: session.user.id,
+              role,
+              identityId: role === 'PATIENT' ? (profile.patient_id || 'PAT-2026-00124') : (profile.professional_id || 'PROF-DEMO-00451'),
+              permissions,
+              issuedAt: new Date().toISOString(),
+              expiresAt: new Date(session.expires_at ? session.expires_at * 1000 : Date.now() + 8 * 3600 * 1000).toISOString(),
+              verifiedRoles: [role],
+              authAssuranceLevel: 'STANDARD',
+              patientIdentity: pIdent || undefined,
+              professionalIdentity: dIdent || undefined
+            };
+
+            sessionStorage.setItem('careq_session', JSON.stringify(activeSession));
+            setCurrentSession(activeSession);
+            setCurrentRole(role);
+          }
+        } else {
+          // No active Supabase session
+          const saved = sessionStorage.getItem('careq_session');
+          if (saved) {
+            sessionStorage.removeItem('careq_session');
+            if (isMounted) {
+              setCurrentSession(null);
+            }
+          }
         }
-      } catch {
-        // Offline / network failure: allow active unexpired session token to persist
+      } catch (err) {
+        console.warn('Session synchronization warning:', err);
       }
     };
-    validateServerSession();
+
+    syncSupabaseSession();
+
+    // Listen to Supabase Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        sessionStorage.removeItem('careq_session');
+        setCurrentSession(null);
+        setSelectedAssessmentId(null);
+        setCurrentRoute('/auth');
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
 
   useEffect(() => {
     localStorage.setItem('careq_assessments', JSON.stringify(assessments));
@@ -429,26 +534,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const actorName = currentRole === 'PATIENT' ? (currentPatient?.name || 'Patient') : (currentDoctor?.name || 'Doctor');
     const actorRole = currentRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker';
     
-    if (currentSession?.sessionId) {
-      try {
-        await fetch('/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentSession.sessionId}`
-          },
-          body: JSON.stringify({ sessionId: currentSession.sessionId })
-        });
-      } catch {
-        // network failure; continue local signout
-      }
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Supabase signOut error:', err);
     }
 
     addAuditEvent(
       'Session Terminated / Sign Out',
       actorName,
       actorRole,
-      `User signed out. Authenticated session token invalidated on server. Role-scoped memory and cache cleared.`,
+      `User signed out. Authenticated Supabase session token invalidated on server. Role-scoped memory and cache cleared.`,
       undefined,
       'AUTH_SESSION_TERMINATED'
     );
@@ -464,7 +560,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? data.verifiedRoles
       : (data.role === 'HEALTHCARE_PROFESSIONAL' ? ['HEALTHCARE_PROFESSIONAL'] : ['PATIENT']);
 
-    const newSessionId = data.sessionToken || `SES-EML-${Date.now().toString(36).toUpperCase()}`;
+    const newSessionId = data.sessionToken || `SES-SUPABASE-${Date.now()}`;
     const newPermissions = effectiveRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS;
 
     let patIdent = patientIdentity;
@@ -474,30 +570,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       patIdent = {
         userId: data.userId || 'USR-DEMO-001',
         role: 'PATIENT',
-        patientId: data.identityId || 'PAT-2026-00124',
-        name: data.email?.includes('riya') ? 'Riya Das' : (data.email?.split('@')[0] || 'Verified Patient'),
+        patientId: data.patientId || data.identityId || 'PAT-2026-00124',
+        name: data.userName || (data.email?.includes('riya') ? 'Riya Das' : (data.email?.split('@')[0] || 'Verified Patient')),
         age: 28,
         gender: 'Female',
         phone: '+91 98765 43210',
-        verifiedStatus: 'DEMO_VERIFIED'
+        verifiedStatus: 'VERIFIED'
       };
       setPatientIdentity(patIdent);
-      setCurrentPatient(MOCK_PATIENTS[0]);
+      if (currentPatient) {
+        setCurrentPatient({
+          ...currentPatient,
+          id: patIdent.patientId,
+          name: patIdent.name
+        });
+      }
     } else {
       profIdent = {
         userId: data.userId || 'USR-DEMO-002',
         role: 'HEALTHCARE_PROFESSIONAL',
-        professionalId: data.identityId || 'PROF-DEMO-00451',
-        name: data.email?.includes('ananya') ? 'Dr. Ananya Sharma' : 'Dr. Medical Officer',
+        professionalId: data.professionalId || data.identityId || 'PROF-DEMO-00451',
+        name: data.userName || (data.email?.includes('ananya') ? 'Dr. Ananya Sharma' : (data.email?.includes('soumya') ? 'Dr. Soumya Sharma' : 'Dr. Medical Officer')),
         title: 'Medical Officer',
         medicalRegistrationId: 'NMC-84920',
         facilityId: 'FAC-DEMO-OD-001',
         facilityName: currentFacility,
         state: 'Odisha',
-        verifiedStatus: 'DEMO_VERIFIED'
+        verifiedStatus: 'VERIFIED'
       };
       setProfessionalIdentity(profIdent);
-      setCurrentDoctor(MOCK_DOCTORS[0]);
+      if (currentDoctor) {
+        setCurrentDoctor({
+          ...currentDoctor,
+          id: profIdent.professionalId,
+          name: profIdent.name
+        });
+      }
     }
 
     const newSession: AuthSession = {
@@ -690,82 +798,245 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 1. Email OTP Send (Login Only) - Section 2 & 3
+  // 1. Email OTP Send (Supabase Auth - Section 5 & 7)
   const sendEmailOtp = async (email: string, purpose: 'login' | 'signup' = 'login', role: UserRole = 'PATIENT'): Promise<EmailOtpSendResponse> => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      return {
+        success: false,
+        message: 'Enter your email address to continue.'
+      };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return {
+        success: false,
+        message: 'Please enter a valid email address.'
+      };
+    }
+
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        message: 'Supabase authentication service is not configured. Please check environment variables.'
+      };
+    }
+
+    addAuditEvent(
+      'Email OTP Requested',
+      cleanEmail,
+      role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+      `Authentication OTP requested for registered email: ${cleanEmail}. Rate limiting and single-use constraints applied.`,
+      undefined,
+      'AUTH_EMAIL_OTP_REQUESTED'
+    );
+
     try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          shouldCreateUser: purpose === 'signup'
+        }
+      });
+
+      if (error) {
+        console.warn('Supabase signInWithOtp error:', error.message, error.status, error.code);
+
+        if (error.code === 'otp_disabled' || error.status === 422 || error.message?.toLowerCase().includes('signups not allowed')) {
+          return {
+            success: false,
+            message: 'No authorized CAREQ account found matching this email address. Please register or verify the entered address.'
+          };
+        }
+
+        if (error.status === 429 || error.code === 'over_email_send_rate_limit' || error.message?.toLowerCase().includes('rate limit')) {
+          return {
+            success: false,
+            message: 'Too many requests. Please wait before requesting another code.'
+          };
+        }
+
+        return {
+          success: false,
+          message: "We couldn't send the verification code. Please try again."
+        };
+      }
+
+      // Mask the email for privacy in the UI (e.g. u••••••@example.com)
+      const [localPart, domain] = cleanEmail.split('@');
+      const maskedLocal = localPart.length > 2 
+        ? localPart[0] + '•'.repeat(Math.max(localPart.length - 2, 4)) + localPart.slice(-1)
+        : localPart[0] + '••••';
+      const masked = `${maskedLocal}@${domain}`;
+
       addAuditEvent(
-        'Email OTP Requested',
-        email,
+        'Email Verification Code Dispatched',
+        cleanEmail,
         role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-        `Authentication OTP requested for registered email: ${email}. Rate limiting and single-use constraints applied.`,
+        `Transactional email OTP dispatched by Supabase Auth to ${masked}. Expiration: 5 minutes.`,
         undefined,
         'AUTH_EMAIL_OTP_REQUESTED'
       );
 
-      const res = await fetch('/auth/email/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        addAuditEvent(
-          'Email Verification Code Dispatched',
-          email,
-          role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-          `Transactional email OTP generated and dispatched to ${data.maskedEmail || email}. Expiration: 5 minutes.`,
-          undefined,
-          'AUTH_EMAIL_OTP_REQUESTED'
-        );
-        return data;
-      }
       return {
-        success: false,
-        message: data.error || 'Failed to dispatch email verification code.',
-        missingConfig: data.missingConfig
+        success: true,
+        message: 'Verification code sent to your email.',
+        maskedEmail: masked,
+        expiresInSeconds: 300,
+        cooldownSeconds: 60,
+        provider: 'supabase'
       };
     } catch {
-      return { success: false, message: 'Network error connecting to email authentication gateway.' };
+      return { success: false, message: "We couldn't connect to CAREQ. Check your internet connection and try again." };
     }
   };
 
-  // 2. Email OTP Verify (Login Only) - Section 2, 3, & 6
+  // 2. Email OTP Verify (Supabase Auth - Section 5, 18, 19, 20)
   const verifyEmailOtp = async (email: string, otp: string, purpose: 'login' | 'signup' = 'login'): Promise<EmailOtpVerifyResponse> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.trim();
+
+    if (!cleanEmail) {
+      return {
+        success: false,
+        message: 'Enter your email address to continue.'
+      };
+    }
+
+    if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
+      return {
+        success: false,
+        message: 'Please enter the complete 6-digit verification code.'
+      };
+    }
+
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        message: 'Supabase authentication service is not configured. Please check environment variables.'
+      };
+    }
+
     try {
-      const res = await fetch('/auth/email/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanOtp,
+        type: 'email'
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+
+      if (error) {
+        console.warn('Supabase verifyOtp error:', error.message, error.status, error.code);
+
         addAuditEvent(
-          'Email OTP Verified',
-          email,
-          data.role === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
-          `Email address verified successfully. Single-use OTP consumed. Authenticated session token issued: ${data.sessionToken?.slice(0, 14)}...`,
+          'Email OTP Verification Failed',
+          cleanEmail,
+          'Patient',
+          `Verification attempt rejected: ${error.message} (status: ${error.status})`,
           undefined,
-          'AUTH_EMAIL_OTP_VERIFIED'
+          'AUTH_EMAIL_OTP_FAILED'
         );
 
-        return data;
+        if (error.code === 'otp_expired' || error.message?.toLowerCase().includes('expired')) {
+          return {
+            success: false,
+            message: 'This verification code has expired. Please request a new code.'
+          };
+        }
+
+        if (error.status === 429 || error.message?.toLowerCase().includes('too many') || error.message?.toLowerCase().includes('rate limit')) {
+          return {
+            success: false,
+            message: 'Too many verification attempts. Please wait and try again later.'
+          };
+        }
+
+        return {
+          success: false,
+          message: 'The verification code is incorrect. Please check the email and try again.'
+        };
+      }
+
+      if (!data?.session || !data?.user) {
+        return {
+          success: false,
+          message: 'Authentication session was not established by Supabase. Please try again.'
+        };
+      }
+
+      // Authoritative Profile and Role Resolution from Supabase database (Section 19)
+      let profile: any = null;
+      const { data: profileById } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (profileById) {
+        profile = profileById;
+      } else {
+        const { data: profileByEmail } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+        if (profileByEmail) {
+          profile = profileByEmail;
+        }
+      }
+
+      if (!profile) {
+        if (purpose === 'signup') {
+          return {
+            success: true,
+            sessionToken: data.session.access_token,
+            userId: data.user.id,
+            email: cleanEmail,
+            role: 'PATIENT'
+          };
+        }
+        return {
+          success: false,
+          message: 'Your CAREQ account is authenticated, but no authorized workspace is assigned. Please contact the CAREQ administrator.'
+        };
+      }
+
+      const resolvedRole: UserRole = profile.role === 'HEALTHCARE_PROFESSIONAL' 
+        ? 'HEALTHCARE_PROFESSIONAL' 
+        : (profile.role === 'PATIENT' ? 'PATIENT' : (null as any));
+
+      if (!resolvedRole) {
+        return {
+          success: false,
+          message: 'Your CAREQ account is authenticated, but no authorized workspace is assigned. Please contact the CAREQ administrator.'
+        };
       }
 
       addAuditEvent(
-        'Email OTP Verification Failed',
-        email,
-        'Patient',
-        `Verification attempt rejected: ${data.error || 'Invalid OTP'}. Remaining attempts: ${data.attemptsRemaining ?? '0'}`,
+        'Email OTP Verified',
+        cleanEmail,
+        resolvedRole === 'PATIENT' ? 'Patient' : 'Healthcare Worker',
+        `Email address verified successfully by Supabase Auth. Authenticated session token issued: ${data.session.access_token.slice(0, 14)}...`,
         undefined,
-        'AUTH_EMAIL_OTP_FAILED'
+        'AUTH_EMAIL_OTP_VERIFIED'
       );
+
       return {
-        success: false,
-        message: data.error || 'The verification code is incorrect. Please try again.',
-        attemptsRemaining: data.attemptsRemaining
+        success: true,
+        sessionToken: data.session.access_token,
+        userId: data.user.id,
+        identityId: resolvedRole === 'PATIENT' ? profile.patient_id : profile.professional_id,
+        patientId: profile.patient_id,
+        professionalId: profile.professional_id,
+        role: resolvedRole,
+        verifiedRoles: [resolvedRole],
+        email: cleanEmail,
+        userName: profile.name,
+        permissions: resolvedRole === 'PATIENT' ? PATIENT_PERMISSIONS : PROFESSIONAL_PERMISSIONS
       };
     } catch {
-      return { success: false, message: 'Network error verifying email code.' };
+      return { success: false, message: "We couldn't connect to CAREQ. Check your internet connection and try again." };
     }
   };
 
